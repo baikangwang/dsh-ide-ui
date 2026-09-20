@@ -325,6 +325,48 @@ for (const d of ['tools', 'tests']) {
   }
 }
 
+// ── 不变量三：A/B/C 不得被当作**层内形态**的标签（2026-09-20 新增）────────────
+//
+// **这条是踩出来的，而且踩了两次。** A/B/C 在本模式里只应指三层部署架构
+// （A 通用引擎 / B 入口预设 / C workspace = `.dsh/` + `.env`）。但设计稿早期有一处内部命名
+// 把 C 层**内部**的 profile / contracts / skills 也叫 A/B/C，随交付件扩散到了
+// `.dsh/README.md`、两份 `contracts/README.md`、`design-standard.md`、`design-doc-writing.md`
+// 与两个预设，共 **23 处**。
+//
+// 危害不是洁癖：`.dsh/README.md` 说 `profile.yaml` 是「A 形态」，而按"只有 C 层随项目走"去读，
+// 读者会怀疑 `profile.yaml` 算哪一层——**它明明在 `.dsh/` 里，当然是 C**。
+//
+// **为什么必须机器查**：两轮人工扫描都漏了同一处——搜的是 `A 形态` / `A profile`，
+// 而这两份 README 用的是**表格单元格 `| **A** |` 与目录树注释 `# A：`**。人眼按措辞搜
+// 必然漏掉"同一概念的另一种排版"。所以判据按**结构**写，不按措辞写。
+//
+// **判据必须精确，否则会误杀正确的那张表**：`.dsh/README.md` 新写的三层表里
+// `| **A** | 通用引擎 | ...` 是**对的**。所以只认两种过载签名：
+//   ① 字母单元格**紧跟一个 `.dsh/` 路径**：`| **A** | \`.dsh/profile.yaml\` |`（三层表的第二格是中文名，不会命中）
+//   ② 目录树注释 `# A：` / `# B：` / `# C：`（带全角冒号，正常行文不会这样写）
+const OVERLOAD = [
+  { re: /\|\s*\*\*[ABC]\*\*\s*\|\s*`\.dsh\//, why: '表格里用 A/B/C 给 `.dsh/` 内的文件当形态标签' },
+  { re: /#\s*[ABC]：/, why: '目录树注释里用 `# A：`/`# B：`/`# C：` 给层内资产当标签' },
+]
+// 注意：`TARGETS` 只覆盖 contracts / contracts-research / skills，**不含 `.dsh/README.md`**，
+// 而它恰恰是这套记号的主叙述处（三层表就写在那里）。所以这里额外把它并进来。
+const ABC_SCAN = [...TARGETS, join(ROOT, '.dsh/README.md')]
+for (const abs of ABC_SCAN) {
+  if (!existsSync(abs)) continue
+  const rel = abs.slice(ROOT.length + 1).replaceAll('\\', '/')
+  const lines = readFileSync(abs, 'utf8').split(/\r?\n/)
+  lines.forEach((line, i) => {
+    for (const { re, why } of OVERLOAD) {
+      if (re.test(line)) {
+        failures.push(
+          `${rel}:${i + 1}  A/B/C 被当作**层内形态**标签（${why}）——` +
+            'A/B/C 只指三层部署架构，层内三样称「技术骨架 / 角色契约 / skill」',
+        )
+      }
+    }
+  })
+}
+
 // ── 输出 ───────────────────────────────────────────────────────────────────
 console.log(`[ref-integrity] ${ROOT}`)
 console.log(`  受检文件 ${TARGETS.length} 份；profile 解析出 ${Object.keys(profile).length} 个键`)
