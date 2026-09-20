@@ -1,5 +1,4 @@
-// ⚠️ 本文件是 agent-mode 仓库 .dsh/tools/ledger-check.mjs 的**副本**。正本：agent-mode 仓库 .dsh/tools/ledger-check.mjs。
-// 副本生成时间：2026-09-19T09:56:05.781Z
+#!/usr/bin/env node
 /**
  * ledger-check.mjs — 运行台账的**格式**校验（P3c）
  *
@@ -14,8 +13,15 @@
  * **不检查**：数字是否真实。**工具的边界必须说清**——它判不了"派发 3 次"是不是真的 3 次，
  * 那要靠证据链与人工。**把格式校验说成内容校验，是比不校验更坏的事。**
  *
- * `{{paths.*}}` 占位符在本工具的默认路径里不生效（它是给 agent 读的约定，不是 shell 展开），
- * 所以默认值直接写相对路径。
+ * `{{paths.*}}` 占位符在本工具里**不靠 shell 展开**，而是由本工具**自己去 `profile.yaml`
+ * 读 `paths.run_ledger`**（2026-09-20 修：此前写死 `docs/CHANGELOG-运行台账.md`，
+ * 于是消费项目改了落点就会报"台账不存在"，而**报错指向的位置本身是错的**——
+ * 与 P10d「契约去项目字面量」同族的缺陷，只是长在工具侧）。
+ *
+ * **两种"还没开始"都算有效状态**（2026-09-20 修）：`run_ledger: none`（本项目尚未启用台账）
+ * 与"路径已声明但文件尚未建立"（首次链闭环时才创建）**都输出 N/A 并以 0 退出**。
+ * 此前只放过"文件存在但为空"，而"文件还没建"判 FAIL——**同一个原因两种结论**，
+ * 而契约明说台账是首次闭环时建立的，于是每个新接入项目第一次跑必然假失败。
  */
 import { readFileSync, existsSync } from 'node:fs'
 import { join, resolve } from 'node:path'
@@ -23,12 +29,38 @@ import { join, resolve } from 'node:path'
 const HERE = new URL('.', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
 const ROOT = resolve(HERE, '..', '..')
 
+// ── 台账落点：优先命令行参数，否则读 profile.yaml 的 paths.run_ledger ──────────
+function declaredLedger() {
+  const p = join(ROOT, '.dsh', 'profile.yaml')
+  if (!existsSync(p)) return { value: null, why: '无 .dsh/profile.yaml' }
+  for (const raw of readFileSync(p, 'utf8').split('\n')) {
+    const m = raw.match(/^\s*run_ledger:\s*([^#\s]+)/)
+    if (m) return { value: m[1], why: '.dsh/profile.yaml 的 paths.run_ledger' }
+  }
+  return { value: null, why: '.dsh/profile.yaml 未声明 paths.run_ledger' }
+}
+
 const arg = process.argv[2]
-const LEDGER = arg ? resolve(ROOT, arg) : join(ROOT, 'docs', 'CHANGELOG-运行台账.md')
+const declared = declaredLedger()
+if (!arg && declared.value === 'none') {
+  console.log('[ledger] N/A：本项目声明 `paths.run_ledger: none`（尚未启用运行台账）')
+  console.log('        这不是通过，是"不适用"——启用时把该键改为实际路径即可。')
+  process.exit(0)
+}
+if (!arg && declared.value === null) {
+  console.log(`[ledger] N/A：${declared.why}，无法确定台账落点。`)
+  console.log('        请先在 .dsh/profile.yaml 声明 paths.run_ledger（或显式传台账路径）。')
+  process.exit(0)
+}
+const LEDGER = arg ? resolve(ROOT, arg) : resolve(ROOT, declared.value)
 
 if (!existsSync(LEDGER)) {
-  console.error('台账不存在：' + LEDGER)
-  process.exit(1)
+  // 与"文件存在但为空"同一结论：都是"还没跑过链"，不是格式错误。
+  console.log('[ledger] N/A：台账尚未建立（' + LEDGER + '）')
+  console.log('        运行台账在**首次链闭环时**创建；契约明说这一步之前无历史数据可补录。')
+  console.log('        因此"尚未建立"与"已建立但为空"**同为有效状态**，不判失败。')
+  console.log('        落点来自：' + (arg ? '命令行参数' : declared.why))
+  process.exit(0)
 }
 
 const FIELDS = ['日期', '链 id', '起止', '档位', '派发', '重派', '轮次', '结论', 'FAIL 分布']

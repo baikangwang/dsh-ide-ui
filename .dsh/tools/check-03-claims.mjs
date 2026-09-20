@@ -1,5 +1,4 @@
-// ⚠️ 本文件是 agent-mode 仓库 .dsh/tools/check-03-claims.mjs 的**副本**。正本：agent-mode 仓库 .dsh/tools/check-03-claims.mjs。
-// 副本生成时间：2026-09-19T13:36:58.454Z
+#!/usr/bin/env node
 /**
  * `docs/03-实施记录.md` 的**数据正确性**核验器。
  *

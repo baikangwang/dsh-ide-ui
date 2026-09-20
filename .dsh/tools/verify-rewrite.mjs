@@ -1,5 +1,4 @@
-// ⚠️ 本文件是 agent-mode 仓库 .dsh/tools/verify-rewrite.mjs 的**副本**。正本：agent-mode 仓库 .dsh/tools/verify-rewrite.mjs。
-// 副本生成时间：2026-09-19T12:12:29.040Z
+#!/usr/bin/env node
 /**
  * verify-rewrite.mjs — 清洗/重写产物的零丢失校验器（零模型参与）
  *
@@ -27,6 +26,10 @@ import { join, dirname, basename } from 'node:path'
  * （唯一定义处，避免各工具各说各话）。
  */
 import { isTraceLine, SELF_REVISION_HEADING_RE, SELF_REVISION_LABEL_RE } from './lib-traces.mjs'
+// 行数必须走唯一定义处（契约「行数口径」：任何工具要行数必须 import 它，不得自行实现）。
+// 2026-09-20 修：此前用 `t.split('\n').length`，对末尾有换行的文件**多算 1 段**，
+// 与 lib-lines 的 167 vs 168 分歧即源于此。
+import { countLines } from './lib-lines.mjs'
 
 /**
  * QA 核对/回环类行的识别。
@@ -119,7 +122,8 @@ function readLines(p) {
   const t = raw.replace(/\r\n?/g, '\n')
   return {
     text: t,
-    lines: t.split('\n'),
+    lines: t.split('\n'),   // 仅供逐行遍历；**行数一律用 lineCount**
+    lineCount: countLines(t),
     bytes: Buffer.byteLength(raw, 'utf8'),
     // contentBytes：统一换行符**之后**的体量。仍含 '\n'，所以行数变化会渗进这个数里。
     contentBytes: Buffer.byteLength(t, 'utf8'),
@@ -221,9 +225,9 @@ function main() {
   //  - 更关键的是，用 contentBytes（仍含 '\n'）会把**行数变化**当成内容变化，
   //    而重排结构（加表格、折行）正是本轮改造的正当动作。详见 readLines 的注释。
   const size = {
-    original: { lines: O.lines.length, bytes: O.bytes, contentBytes: O.contentBytes, contentChars: O.contentChars, eol: O.eolStyle },
-    rewrite: { lines: R.lines.length, bytes: R.bytes, contentBytes: R.contentBytes, contentChars: R.contentChars, eol: R.eolStyle },
-    deltaLines: R.lines.length - O.lines.length,
+    original: { lines: O.lineCount, bytes: O.bytes, contentBytes: O.contentBytes, contentChars: O.contentChars, eol: O.eolStyle },
+    rewrite: { lines: R.lineCount, bytes: R.bytes, contentBytes: R.contentBytes, contentChars: R.contentChars, eol: R.eolStyle },
+    deltaLines: R.lineCount - O.lineCount,
     deltaBytes: R.bytes - O.bytes,
     deltaContentBytes: R.contentBytes - O.contentBytes,
     deltaContentChars: R.contentChars - O.contentChars,
@@ -236,7 +240,7 @@ function main() {
     //   **重排结构必然改行数**——把长行折成表格、给新章节加标题，都是本轮该做的事。
     //   行数放在判据里，等于禁止重排。故拆成两个独立信号：内容看 netGrowthOk，行数看 lineGrowth。
     netGrowthOk: (R.contentChars - O.contentChars) <= 0,
-    lineGrowth: R.lines.length - O.lines.length,
+    lineGrowth: R.lineCount - O.lineCount,
   }
 
   // ---- 2. 设计标识符 ----

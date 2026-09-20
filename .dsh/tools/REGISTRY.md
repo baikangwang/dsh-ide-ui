@@ -3,7 +3,7 @@
 > **生成物，不要手改**——改 `dev/sync-tools.mjs` 的 `TOOLS` 常量后跑
 > `node dev/gen-tool-registry.mjs` 重新生成。一致性校验：`node dev/gen-tool-registry.mjs --check`。
 >
-> 生成日期：2026-09-19　｜　在役 **18** 支
+> 生成日期：2026-09-20　｜　在役 **18** 支
 
 ## 为什么要有这份登记册
 

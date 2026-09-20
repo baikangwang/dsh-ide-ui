@@ -1,5 +1,4 @@
-// ⚠️ 本文件是 agent-mode 仓库 .dsh/tools/measure-netgrowth.mjs 的**副本**。正本：agent-mode 仓库 .dsh/tools/measure-netgrowth.mjs。
-// 副本生成时间：2026-09-19T09:44:13.462Z
+#!/usr/bin/env node
 /**
  * B 类净增长测量：**扣除新增章节后，其余部分不得增长**
  *
@@ -72,6 +71,9 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
+// 行数必须走唯一定义处（契约「行数口径」）。2026-09-20 修：此前 `A.length`/`B.length`
+// 对末尾有换行的文件**多算 1 段**；两侧同步改正，deltaLines 不受影响，绝对值变正确。
+import { countLines } from './lib-lines.mjs'
 
 function parseArgs(argv) {
   const a = {}
@@ -134,8 +136,8 @@ function measure(originalPath, rewritePath) {
   const sizeKept = contentSize(kept)
 
   return {
-    originalLines: A.length,
-    rewriteLines: B.length,
+    originalLines: countLines(rawA),
+    rewriteLines: countLines(rawB),
     originalSize: sizeA,
     rewriteSize: sizeB,
     baselineSize: sizeKept,        // 仅删基线 = 原稿 − 被删除的行
