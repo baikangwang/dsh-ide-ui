@@ -98,9 +98,27 @@ const SPLIT_DECL = /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*[^\n]{0,80}?\.s
 // 要覆盖它得做数据流分析，正则做不到；宁可不报，也不发一个会误杀的判据。
 //
 // 契约「行数口径」管的是**文件的"行数"这个数**；下列两处不是：
+//
+// ⚠️ **豁免的键必须是"内容特征"，不能是"文件:行号"**（2026-09-20 修）：
+//   原先键写作 `table-integrity.mjs:76`，结果一次**与该判据毫无关系**的改动
+//   （7 支工具改自相对作用域）把该文件行号整体挪了 12 行 → 豁免当场失效，
+//   一边报"新违反"、一边报"豁免名单已过期"，**两处失败都跟被改的东西无关**。
+//   一个会被无关改动打穿的豁免名单，比没有豁免更坏：它逼人为了无关改动手工改编号。
+//   现改为 `文件|代码特征`，行号位移不再影响，语义（必须被用到，否则报过期）不变。
 const BENIGN = new Map([
-  ['table-integrity.mjs:76', '`while (j < L.length && …)` 是**逐行扫描的循环上界**，不是把行数当值报出去。'],
+  ['table-integrity.mjs|while (j < L.length', '`while (j < L.length && …)` 是**逐行扫描的循环上界**，不是把行数当值报出去。'],
 ])
+
+// 命中是否落在已登记的豁免上（按文件 + 代码特征匹配，不看行号）
+const benignWhy = (o) => {
+  for (const [sig, why] of BENIGN) {
+    const idx = sig.indexOf('|')
+    const file = sig.slice(0, idx)
+    const needle = sig.slice(idx + 1)
+    if (o.name === file && o.code.includes(needle)) return why
+  }
+  return null
+}
 
 console.log('\n全交付面：宣称"任何工具要行数必须 import lib-lines"——谁在自行实现')
 const offenders = []
@@ -132,13 +150,20 @@ for (const name of files) {
 }
 for (const o of offenders) {
   const key = `${o.name}:${o.line}`
-  const benign = BENIGN.get(key)
+  const benign = benignWhy(o)
   const tag = benign ? '良性' : '违反'
   console.log(`  ${tag} ${key}  ${o.code}${benign ? `\n        └─ ${benign}` : o.usesLib ? '  ← 该文件已 import lib-lines，但这一行没有用它' : ''}`)
 }
 // **不因文件 import 了 lib-lines 就放行这一行**：import 了还裸数行，恰恰是最该抓的。
-const hard = offenders.filter((o) => !BENIGN.has(`${o.name}:${o.line}`))
-const stale = [...BENIGN.keys()].filter((k) => !offenders.some((o) => `${o.name}:${o.line}` === k))
+const hard = offenders.filter((o) => benignWhy(o) === null)
+// 过期的判定同样按内容特征：登记的豁免在该文件里**再也找不到对应命中**才算过期。
+// （按行号判过期会把"行号位移"误报成"豁免烂在名单里"。）
+const stale = [...BENIGN.keys()].filter((sig) => {
+  const idx = sig.indexOf('|')
+  const file = sig.slice(0, idx)
+  const needle = sig.slice(idx + 1)
+  return !offenders.some((o) => o.name === file && o.code.includes(needle))
+})
 if (stale.length > 0) {
   // 豁免点消失（代码被改走）→ 也必须失败，否则豁免会烂在名单里
   console.log(`\n  豁免名单已过期（该处不再命中，请删除登记）：${stale.join(', ')}`)

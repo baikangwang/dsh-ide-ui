@@ -11,15 +11,27 @@
  *   删体 = 表行直接消失（**数据真丢**）。
  *   两者数值判据都看不见。
  *
- * 用法：node tools/find-empty-table-body.mjs [--top 30]
+ * 用法：node .dsh/tools/find-empty-table-body.mjs [--top 30] [--projects a,b,c]
  */
 import { readFileSync, readdirSync, existsSync, mkdirSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, dirname, resolve, basename } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { execSync } from 'node:child_process'
 
-const P = 'D:/working/projects'
-const PROJECTS = ['teamcodingknowledge', 'dsh-vscode-agent', 'dsh', 'agent-mode']
-const OUT = join(P, 'agent-mode', '.dsh', 'tmp', 'table-check')
+// ── 作用域与落点：**自相对**，不假定兄弟项目 ─────────────────────────────
+// 2026-09-20 修：此前写死 `D:/working/projects` + 固定 4 个项目清单，而这些工具
+// **随 .dsh/ 交付到消费项目**——在别人机器上它会去扫一个不存在的目录，或更糟：
+// 扫到同名的别的项目。改为从工具自身位置推出所属项目（工具住在 <项目>/.dsh/tools/）。
+// 保留多项目能力：显式传 --projects a,b,c（名字相对本项目的父目录）。
+const HERE = dirname(fileURLToPath(import.meta.url))
+const SELF = resolve(HERE, '..', '..')            // 本工具所属的项目根
+const P = dirname(SELF)                            // 兄弟项目所在目录（仅 --projects 时用到）
+const PROJECTS = (() => {
+  const i = process.argv.indexOf('--projects')
+  if (i < 0) return [basename(SELF)]               // 默认只扫所属项目
+  return (process.argv[i + 1] || '').split(',').map((s) => s.trim()).filter(Boolean)
+})()
+const OUT = join(SELF, '.dsh', 'tmp', 'table-check')
 mkdirSync(OUT, { recursive: true })
 const isSep = (l) => /^\s*\|[\s:|-]+\|\s*$/.test(l || '')
 const isTbl = (l) => /^\s*\|.*\|\s*$/.test(l || '')

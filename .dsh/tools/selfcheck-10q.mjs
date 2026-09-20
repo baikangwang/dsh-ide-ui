@@ -18,19 +18,31 @@
  *   Q9  比上一轮变长了吗（清洗场景 N/A）      → 不适用
  *   Q10 数值留痕核对                          → 已有 verify-rewrite.mjs 的第 2b 节覆盖
  *
- * 用法：node tools/selfcheck-10q.mjs [--project dsh] [--top 40]
+ * 用法：node .dsh/tools/selfcheck-10q.mjs [--project dsh] [--top 40] [--projects a,b,c]
  */
 import { readFileSync, readdirSync, existsSync, statSync, mkdirSync, writeFileSync } from 'node:fs'
-import { join, basename } from 'node:path'
+import { join, basename, dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { countLines } from './lib-lines.mjs'
 
 const argv = process.argv.slice(2)
 const getArg = (n) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined }
 const projFilter = getArg('--project')
 const TOP = Number(getArg('--top') ?? 40)
-const P = 'D:/working/projects'
-const PROJECTS = ['teamcodingknowledge', 'dsh-vscode-agent', 'dsh', 'agent-mode']
-const OUT = join(P, 'agent-mode', '.dsh', 'tmp', 'selfcheck')
+// ── 作用域与落点：**自相对**，不假定兄弟项目 ─────────────────────────────
+// 2026-09-20 修：此前写死模式仓库的绝对路径 + 固定 4 个项目清单，而这些工具
+// **随 .dsh/ 交付到消费项目**——在别人机器上它会去扫一个不存在的目录，或更糟：
+// 扫到同名的别的项目。改为从工具自身位置推出所属项目（工具住在 <项目>/.dsh/tools/）。
+// 保留多项目能力：显式传 --projects a,b,c（名字相对本项目的父目录）。
+const HERE = dirname(fileURLToPath(import.meta.url))
+const SELF = resolve(HERE, '..', '..')            // 本工具所属的项目根
+const P = dirname(SELF)                            // 兄弟项目所在目录（仅 --projects 时用到）
+const PROJECTS = (() => {
+  const i = process.argv.indexOf('--projects')
+  if (i < 0) return [basename(SELF)]               // 默认只扫所属项目
+  return (process.argv[i + 1] || '').split(',').map((s) => s.trim()).filter(Boolean)
+})()
+const OUT = join(SELF, '.dsh', 'tmp', 'selfcheck')
 mkdirSync(OUT, { recursive: true })
 
 const walkMd = (d, out, dep = 0) => {

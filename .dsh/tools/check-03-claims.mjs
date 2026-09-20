@@ -10,17 +10,40 @@
  * ⚠️ 本工具本身也遵守那条纪律：**每个断言都打印它读的是哪个文件，
  * 并给出权威口径的出处**——否则它自己就是一条悬空的结论。
  *
- * 用法：node tools/check-03-claims.mjs
+ * ⚠️ **作用域（2026-09-20 修）**：本工具的**受检对象是模式仓库自己的
+ * `docs/03-实施记录.md`**——而按交付单位裁决，`docs/` **不是交付件**，
+ * 消费项目里根本没有这份文档。此前它写死模式仓库的绝对路径，于是：
+ * 在别人机器上要么路径不存在直接崩，要么扫到同名的别的目录。
+ * 现在改为**自相对**（从工具位置推出所属项目），且**受检文档不存在时输出 N/A 并退出 0**
+ * ——"本工具在此项目不适用"必须是一个明确结论，不能是崩溃，更不能是假通过。
+ *
+ * 📌 **遗留判断（待用户裁决，见交接清单）**：本工具受检对象是模式仓库自身文档，
+ * 按 A/B/C 架构它其实更像 `dev/` 里的**模式仓库开发工具**，而不是随 `.dsh/` 交付的能力脚本。
+ * 本次只做"改成自相对 + 不适用即 N/A"，**不擅自搬动它在 REGISTRY 里的地位**。
+ *
+ * 用法：node .dsh/tools/check-03-claims.mjs
  */
 import { readFileSync, existsSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { createHash } from 'node:crypto'
 import { readdirSync, statSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { countLines } from './lib-lines.mjs'
 
-const DOC = 'D:/working/projects/agent-mode/docs/03-实施记录.md'
+const HERE = dirname(fileURLToPath(import.meta.url))
+const SELF = resolve(HERE, '..', '..')            // 本工具所属的项目根
+const DOC = join(SELF, 'docs', '03-实施记录.md')
 const PRESET = join(process.env.USERPROFILE, '.dsh', '.agent-presets')
+
+if (!existsSync(DOC)) {
+  console.log('[check-03-claims] N/A：本项目的 docs/03-实施记录.md 不存在。')
+  console.log('  本工具的受检对象是**模式仓库自己的实施记录**（docs/ 按交付单位裁决不是交付件），')
+  console.log('  因此它对消费项目**不适用**——这不是通过，是"不适用"。')
+  console.log('  查的是什么：' + DOC)
+  process.exit(0)
+}
+
 const doc = readFileSync(DOC, 'utf8').replace(/\r\n?/g, '\n')
 
 let pass = 0, fail = 0
