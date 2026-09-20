@@ -120,7 +120,7 @@ checks:
   plugin_env: powershell -ExecutionPolicy Bypass -File scripts/verify-ide-plugin.ps1   # 装进 profile 后必须全绿
 
 # 安全/约束红线 —— 2026-08-25 v2 起不再由引擎守卫读取（agile-dev-host 已删除）。
-# 红线改为契约规则（_shared/engineering-baseline.md 分支管理 + deployer/deploy-standard.md 远程入口），
+# 红线改为契约规则（_shared/engineering-rules.md 分支管理 + deployer/deploy-standard.md 远程入口），
 # 编排人格 + 角色契约要求模型遵守；工具层由 dsh 原生 sandbox 模式 + approval 兜底。
 # 下方为项目事实声明（实测 2026-09-19，供契约/人工作为依据）：
 security:
@@ -128,6 +128,7 @@ security:
     stable_branch: master                   # 实测 git symbolic-ref HEAD = refs/heads/master（**不是 main**）
     ai_forbidden_branches: [master]
     ai_allowed: [develop, feature-*, fix-*]
+    conflict_resolution: 本仓检出 master 而红线禁 master；**2026-09-20 用户裁决授权在 master 上提交**。授权状态变化时改这一行。
   git_remote:
     origin: https://github.com/baikangwang/dsh-ide-ui.git   # 单远端（实测 git remote -v）
     note: 公开仓库；AI 不推 master，推送目标按用户当次指定
