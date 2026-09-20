@@ -1,0 +1,16 @@
+# 行尾统一为 LF —— 这不是洁癖，是**交付一致性**要求。
+#
+# 为什么必须随 `.dsh/` 一起交付（2026-09-20 补）：
+#   `.dsh/` 里的契约、skill、tools 都靠**逐字节比对**判定"副本没有漂移"
+#   （`dev/sync-tools.mjs` 的分发、`dev/project-conformance-check.mjs` 的终审）。
+#   目标项目若没有这条规则、而本机 `core.autocrlf=true`，一次 fresh clone /
+#   `git checkout` 就会把 `.dsh/contracts/**` 检出成 CRLF ——
+#   于是**终审在那台机器上必然 FAIL**，而磁盘上的内容其实一个字都没改。
+#
+# 为什么放在 `.dsh/` 里而不是项目根：
+#   交付单位是 **`.dsh/` + `.env`**（2026-09-18 用户裁定），不往项目根多加文件。
+#   git 会读取子目录里的 `.gitattributes`，其规则只作用于该目录下的路径，
+#   所以这一份**只约束 `.dsh/`**，不干涉目标项目自己代码库的行尾策略。
+#
+# 结论：**入库存 LF，检出也 LF。** 需要 CRLF 的编辑器自行处理，不由版本库决定。
+* text=auto eol=lf

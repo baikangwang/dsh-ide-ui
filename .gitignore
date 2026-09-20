@@ -2,10 +2,23 @@ node_modules/
 dist/
 build/
 .pnpm-store/
-.dsh/
+# ── `.dsh/` 的忽略面（2026-09-20 收窄）────────────────────────────────────────
+# 原先是整目录 `.dsh/`，后果：**本次模式交付的 34 个文件一个都进不了版本库**，
+# `git add .dsh` 被静默忽略（`git ls-files .dsh` = 0 条），
+# 与「有 git 控制的项目要提交改造结果」直接冲突。
+#
+# 收窄的依据是模式自己的两态划分（见 `.dsh/README.md`「两态划分」）：
+#   正式产出（**绝不清理，应当入库**）= profile.yaml / contracts / skills / tools / tests / README.md
+#   临时产物（**闭环直接删除，不该入库**）= .dsh/tmp/ + .dsh/reports/
+# 所以只忽略后两者，交付件本体恢复可跟踪。
+.dsh/tmp/
+.dsh/reports/
 .agent-presets/
 *.log
 .DS_Store
 lib/**/tsconfig.*.tsbuildinfo
 .npm-cache-tmp/
 packages/ide/lib/client.js
+
+# 项目凭证层（`.dsh/` 接入模式时生成）——**必须忽略**（2026-09-20 补）
+.env

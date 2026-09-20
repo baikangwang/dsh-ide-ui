@@ -1,0 +1,144 @@
+# ============================================================
+# 敏捷模式（agile）— 本项目骨架声明（形态 A）
+#
+# 契约只写"如何检查"，具体取值一律来自本文件与项目级 skill；
+# **换项目时改本文件，不改契约**。
+#
+# ⚠️ 2026-09-19 迁移订正：本文件此前的内容**整个属于另一个项目 compute-core**
+#    （project: agent-mode-compute-core、Java 8 / Spring Boot 2.2.7 / Gradle /
+#     MyBatis-Plus / RabbitMQ+Kafka / Harbor / K8s / 端口 40201）——
+#    本项目是 TypeScript + pnpm 的 DSH Web UI 插件，两套事实没有一个字重合。
+#    这跟 zsvirt 头部自述的"整目录拷来导致身份是错的"是同一类错误。
+#    现已按 package.json / pnpm-workspace.yaml / tsconfig.base.json /
+#    packages/ide/package.json / .git / docs/ 逐项实测重写。
+# ============================================================
+meta:
+  kind: agile-project
+  version: 2
+  # 项目标识（用于项目级 skill 命名与契约路由）
+  project: deepseek-harness-UI
+  # 关联的 workspace 标题（display 用）
+  title: dsh-ide-ui (DSH Web UI 的 VSCode 风格工作台：TypeScript + pnpm 单包双面插件)
+
+# 路径声明 —— 契约中的 `{{paths.*}}` 占位符解析到此处。
+paths:
+  source: packages/ide/src/                # 生产代码（Host 半 + 浏览器半，同一包）
+  # 本项目**没有单元测试框架**（全仓无 test 脚本、无测试用例目录）。
+  # 现有的可跑验证资产在 scripts/ 下，故 paths.tests 指向它；详见项目级 skill §5。
+  tests: scripts/
+  docs: docs/                              # 设计文档 / 部署与发布记录
+  # ⚠️ 下面两份台账**目前尚不存在**（实测 docs/ 只有 architecture.md / cicd.md /
+  #    deployment.md / rc8-upgrade-design.md / smoke-rc20.md）。据实声明路径，
+  #    首次产生变更 / 首条链闭环时按契约新建；**不要当成"已存在"去引用**。
+  changelog: docs/CHANGELOG-设计文档.md      # 变更台账（一行一版）
+  run_ledger: docs/CHANGELOG-运行台账.md     # 运行台账（每链一行，与 changelog 是两份东西）
+  contracts: .dsh/contracts/
+  skills: .dsh/skills/
+  tools: .dsh/tools/
+  verify_rewrite: .dsh/tools/verify-rewrite.mjs
+  remote_entry: none                        # 无远程操作入口（本机开发 + git push + CI）
+
+# 技术栈骨架 —— 契约据此选择构建/测试/校验行为
+tech_stack:
+  language: typescript
+  language_secondary: [css, markdown, powershell, javascript]
+  module_system: esm
+  runtime: node                             # 构建期边；运行期是浏览器（Web UI 插件）
+  runtime_secondary: browser
+  package_manager: pnpm                     # 11（pnpm-workspace.yaml + pnpm-lock.yaml；dsh-release.json 声明 pnpmVersion 11）
+  workspace: pnpm-workspace.yaml            # packages/* —— 单仓（monorepo），当前只有 1 个包
+  monorepo_packages: [packages/ide]
+  tsconfig: tsconfig.base.json              # target es2024 / module esnext / strict / noEmit
+  jsx: react-jsx                            # packages/ide/tsconfig.json
+  # build **只放"能跑通的那一行命令"**，不放工具名（tsdown 是工具名，见 build_tool）。
+  # 为什么不是 `pnpm build`：根 package.json 的 build 是
+  #   `pnpm -r --filter './packages/*' build`，而**本机 PATH 上没有 pnpm**
+  #   （2026-09-19 实测 `pnpm --version` → CommandNotFound）；
+  #   code-gate 的 C5 会真的执行这个字符串并拿退出码，写 `pnpm build` 会直接 FAIL。
+  # 本 workspace 只有 packages/ide 一个包，所以直接跑该包的 build 脚本即等价，且实测通过：
+  #   2026-09-19 `npm --prefix packages/ide run build` → 退出码 0（tsdown 0.22.14 三产物构建完成）。
+  # 若 pnpm 已在 PATH 上，`pnpm build` / `corepack pnpm build`（corepack 实测 11.7.0）同样成立。
+  build: npm --prefix packages/ide run build
+  build_tool: tsdown                        # 工具名另立键，不占 build
+  build_canonical: pnpm build               # README/docs 里写的规范写法（需要 pnpm 在 PATH 上）
+  clean: none                               # 无 clean 脚本；lib/ 产物由重新构建覆盖（deploy 契约 clean 目标据此判「不适用」）
+  port: none
+  db: none
+  test:
+    runner: node
+    # ⚠️ 本项目没有单元测试框架，也没有测试用例目录。这里的 unit 与模式正本 agent-mode
+    #    同一处置：指向随 .dsh/ 交付、真实可跑的自检脚本。
+    #    **不要把这个键读成"本项目有单元测试"。**
+    unit: node .dsh/tests/ref-integrity-check.mjs
+    framework: none
+    typecheck: npm --prefix packages/ide run typecheck        # tsc --noEmit，实测 2026-09-19 退出码 0
+    integration: powershell -ExecutionPolicy Bypass -File scripts/verify-ide-plugin.ps1   # 30 项部署后环境验证（需已装进 profile）
+  # QA 代码审计 C2 检查项（**必须是路径前缀列表**，按前缀匹配变更文件）。
+  # ⚠️ 列表项**不能写行尾注释**：code-gate.mjs 的列表解析器不像标量那样剥掉 `# …`，
+  #    行尾注释会被当成路径前缀的一部分（实测 C2 因此退化成 N/A）。注释只能写在列表上方。
+  #   packages/ide/src/  = 唯一源码树（index.ts 是 Host 半，client/ 是浏览器半）
+  #   packages/ide/lib/  = tsdown 构建产物（勿手改，改 src 重构建）
+  #   scripts/           = 发布 / 验证 / 图标与映射生成脚本
+  package_layout:
+    - packages/ide/src/
+    - packages/ide/lib/
+    - scripts/
+
+# 部署骨架 —— 本项目**没有容器 / 服务端部署**：分发物是 npm 包 + GitHub Release 附件（含离线 zip）。
+deploy:
+  platform: dsh-profile                     # 部署目标 = 本机 DSH profile 的 node_modules/dsh-ide-ui
+  orchestration: github-actions             # 推 `v*` tag → .github/workflows/release.yml（build → npm pack → 离线 zip → GitHub Release）
+  remote_access: none                       # 无远程写入；无 ssh/scp/远端主机
+  # 下面三键是 deploy 契约 Makefile 骨架的占位符取值来源。本项目**没有**这三样东西，
+  # 据实填 none（帮助文档契约据此判「不适用」，不是要求一条不存在的命令）。
+  registry: none                            # 无容器制品仓库
+  service: none                             # 非服务型应用（浏览器半 + Host 半的 npm 包）
+  arch: none                                # 不做多架构镜像构建
+  artifact: dist/dsh-ide-ui-<version>.tgz
+  offline_artifact: dist/dsh-ide-ui-offline-<version>.zip
+  installer: scripts/offline/install-dsh-ide-ui.ps1
+  config: dsh-release.json                  # 项目差异全部收敛在此（包目录/包名/命令/离线开关/pnpmVersion）
+
+# 发布骨架（本项目真实的"交付到用户手上"链路；deploy 契约的容器部分整体不适用）
+release:
+  trigger: 推 `v<package.json version>` tag（普通 push 零触发）
+  driver: scripts/dsh-release.mjs           # 幂等：读版本 → 自动打 tag + push → 维护各仓库 workflow
+  ci: .github/workflows/release.yml         # 校验版本一致 → typecheck → build → npm pack → 离线 zip → GitHub Release
+  npm_publish: false                        # dsh-release.json 的 npm: false（当前不发 npm registry）
+  skill: skills/release/SKILL.md            # 操作层：挂到 agent 预设，识别项目 / 读配置 / 前置检查 / 向用户确认
+
+# 与"构建"等价的本地校验入口 —— 契约写"跑 {{checks.gate}}"时解析到这里。
+checks:
+  lint: none                                # 无 lint 入口（无 eslint 配置与脚本）
+  typecheck: npm --prefix packages/ide run typecheck
+  build: npm --prefix packages/ide run build
+  gate: node .dsh/tests/ref-integrity-check.mjs              # 本项目总闸（交付件自检）
+  code_gate: node .dsh/tools/code-gate.mjs --scope <本次变更文件...>   # QA 的 C2–C6
+  profile_ref: node .dsh/tools/profile-ref-check.mjs
+  line_caliber: node .dsh/tests/lib-lines-check.mjs
+  code_gate_three_state: node .dsh/tests/code-gate-check.mjs
+  plugin_env: powershell -ExecutionPolicy Bypass -File scripts/verify-ide-plugin.ps1   # 装进 profile 后必须全绿
+
+# 安全/约束红线 —— 2026-08-25 v2 起不再由引擎守卫读取（agile-dev-host 已删除）。
+# 红线改为契约规则（_shared/engineering-baseline.md 分支管理 + deployer/deploy-standard.md 远程入口），
+# 编排人格 + 角色契约要求模型遵守；工具层由 dsh 原生 sandbox 模式 + approval 兜底。
+# 下方为项目事实声明（实测 2026-09-19，供契约/人工作为依据）：
+security:
+  branch_policy:
+    stable_branch: master                   # 实测 git symbolic-ref HEAD = refs/heads/master（**不是 main**）
+    ai_forbidden_branches: [master]
+    ai_allowed: [develop, feature-*, fix-*]
+  git_remote:
+    origin: https://github.com/baikangwang/dsh-ide-ui.git   # 单远端（实测 git remote -v）
+    note: 公开仓库；AI 不推 master，推送目标按用户当次指定
+  credentials:
+    managed_by: dsh                         # 凭证经 DSH credentials 解析引用，规则文件只写 credential:<KEY>
+    env_file: .env                          # 项目根 .env（141B，2026-09-19 实测**只有两行注释，无任何凭证**）
+  delivery_gap:                             # ⚠️ 交付件进不了版本库（只报告，本次不改 .gitignore）
+    note: >-
+      .gitignore 第 5 行是 `.dsh/`，整个 .dsh/ 被忽略（git check-ignore 确认 .gitignore:5:.dsh/），
+      git ls-files .dsh 为空 ⇒ 本次交付的契约/skill/tools/tests/profile **无法提交**。
+      另：.gitignore 里**没有** .env 规则，git status 把 .env 显示为未跟踪（?? ），
+      而 adapt-project 生成的 .env 脚手架自述"已在 .gitignore 忽略"——该自述在本项目不成立。
+      建议的一行修法（未执行）：在 .gitignore 里去掉 `.dsh/`，或改为
+      `.dsh/tmp/` + `.dsh/reports/`（只忽略临时产物，留住交付件）。
