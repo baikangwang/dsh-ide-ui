@@ -97,7 +97,7 @@ QA 对**本阶段全部检查项**负责。检查项的 id 与标准由模式专
 | 同上，需逐个数值确认去留 | `num-diff.mjs` | 全量对撞明细 |
 | 同一份文档**第二轮及以后**的修订 | `measure-netgrowth.mjs`（必要时 `measure-section-growth.mjs` 定位到节） | 净增长 > 0 且属过程沉淀 → FAIL |
 | 怀疑**表格结构**被破坏（拍扁／表体删除／重复行） | `table-integrity.mjs`，按需加 `analyze-flatten.mjs` / `find-empty-table-body.mjs` / `row-duplication.mjs` | **须配原文对照**才有意义；只在"改前没有、改后有"时才算缺陷 |
-| 怀疑**结论缺失**（不是"结论错"） | `detect-gaps.mjs` / `check-03-claims.mjs` | 只测"正文有没有那个结构"，**不测内容对不对** |
+| 怀疑**结论缺失**（不是"结论错"） | `detect-gaps.mjs` | 只测"正文有没有那个结构"，**不测内容对不对** |
 | 写作角色交付前 | `selfcheck-10q.mjs`（机械化部分） | 契约中 10 问的人读部分**不可被工具替代** |
 | 核对文档内引用是否真存在 | `ref-existence-check.mjs`（或项目就绪检查里的引用完整性检查） | 悬空引用 → FAIL |
 
