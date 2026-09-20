@@ -1,4 +1,5 @@
-#!/usr/bin/env node
+// ⚠️ 本文件是 agent-mode 仓库 .dsh/tools/measure-section-growth.mjs 的**副本**。正本：agent-mode 仓库 .dsh/tools/measure-section-growth.mjs。
+// 副本生成时间：2026-09-20T09:07:20.327Z
 /**
  * measure-section-growth.mjs — B 类「净增长」的**逐节对账**器（零模型参与）
  *

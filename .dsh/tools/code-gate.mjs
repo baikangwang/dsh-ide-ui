@@ -1,4 +1,5 @@
-#!/usr/bin/env node
+// ⚠️ 本文件是 agent-mode 仓库 .dsh/tools/code-gate.mjs 的**副本**。正本：agent-mode 仓库 .dsh/tools/code-gate.mjs。
+// 副本生成时间：2026-09-20T10:31:49.077Z
 /**
  * code-gate.mjs — 把可形式化的代码判据下沉为脚本（P1b，对应 QA C2–C6）
  *
@@ -201,6 +202,23 @@ function checkC3() {
 }
 
 // C4 错误处理与日志
+//
+// **2026-09-20 第十二轮续：筛选方向从"正向白名单"反转为"负向黑名单"。**
+//
+// 原先写的是正向白名单 `/\.(js|mjs|cjs|ts|tsx|java|py|go|rb|php|cs|kt|scala)$/`——
+// **没列进去的语言，这一项检查就静默地一条都不查**。实测：Rust 项目（`.rs`）不在表内，
+// 于是 C4 在**任何** Rust 项目上都只输出"符合 profile 声明的异常包与日志库"（因为 notes 恒为空），
+// **看起来是 PASS，实际是没查**。
+//
+// **这正是下面 C5 那段教训的同族缺陷**（"N/A / PASS 在本模式里是合法且不阻断的结论，
+// 所以判据失效时的表现是静默通过，而不是报错"）。正向白名单的**失效方向朝漏检**，
+// 每加一门语言都要有人记得回来补表——**依赖记忆的判据迟早会漏**。
+//
+// 反转后：**未知语言默认被检查**，只有明确"不是代码"的扩展名才排除。
+// 失效方向因此朝"多查几个文件"——而 C4 的结论本来就是 REVIEW（**非阻断**），
+// 多报几个待人工确认的文件，代价远小于静默漏检。
+const NOT_SOURCE = /\.(md|markdown|mdx|txt|rst|json|json5|jsonc|ya?ml|toml|ini|cfg|conf|properties|lock|log|csv|tsv|xml|html?|xhtml|css|scss|sass|less|styl|svg|png|jpe?g|gif|webp|ico|bmp|pdf|zip|gz|tgz|bz2|xz|tar|jar|war|ear|exe|dll|so|dylib|class|pyc|pyo|o|a|lib|bin|dat|db|sqlite|woff2?|ttf|eot|mp[34]|wav|avi|mp4|mov|map|snap|patch|diff|min\.js|min\.css)$/i
+
 function checkC4() {
   const excPkg = prof.val('tech_stack.package_layout.exception') ?? prof.val('package_layout.exception')
   const logLib = prof.val('tech_stack.logging') ?? prof.val('tech_stack.log_library')
@@ -210,7 +228,7 @@ function checkC4() {
   }
   const notes = []
   for (const [f, t] of contents) {
-    if (t === null || !/\.(js|mjs|cjs|ts|tsx|java|py|go|rb|php|cs|kt|scala)$/i.test(f)) continue
+    if (t === null || NOT_SOURCE.test(f)) continue
     if (excPkg && !t.includes(excPkg)) notes.push(f + ' 未出现声明的异常包 ' + excPkg + '（若本文件不处理异常可忽略）')
     if (logLib && !t.toLowerCase().includes(logLib.toLowerCase())) notes.push(f + ' 未出现声明的日志库 ' + logLib + '（若本文件不记日志可忽略）')
   }

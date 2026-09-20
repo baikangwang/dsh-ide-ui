@@ -22,8 +22,10 @@ whenToUse: 需要跑能力脚本核对文档质量（零丢失/数值留痕/表�
 >   `audit-criteria`，连同 skill `doc-rewrite-a-class` 与 `doc-cleaning-b-class`。
 >   **它们全部针对存量文档的一次性清洗与重写——存量整治做完，它们就是死资产。**
 >
-> **保留的边界**：`gate-standard.md` 的「工具触发规则」里那些**产出或修订文档后持续适用**的
+> **保留的边界**：`.dsh/contracts/_shared/qa-common.md` 的「工具触发规则」里那些**产出或修订文档后持续适用**的
 > 常规质量评测，一律保留。判据与清单见 `docs/CHANGELOG-调研报告.md` 第五、六轮。
+>
+> 2026-09-20 第十二轮续订正：上句原指 `gate-standard.md`——该节已抽到两模式共用的 `_shared/qa-common.md`。
 
 # agile-toolkit — 能力脚本用法手册（形态 C，按需加载）
 

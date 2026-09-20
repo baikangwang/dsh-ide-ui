@@ -472,7 +472,7 @@ node {{paths.tools}}verify-rewrite.mjs --original <原稿> --rewrite <改后稿>
 |---|---|---|
 | 写作契约（架构师 / 分析师） | 见本文件开头「路径写法」 | 五条准则 + **压缩粒度边界** + 结构模板 + 整体重写语义 + 回环期纪律（净增长 ≤0） |
 | 检查契约（QA） | 见本文件开头「路径写法」 | D8–D13 检查项（含 **D13 数值证据完整**）+ 修订度量三个数 + `CONTROL_LOSS` 终止条件 + 审计产物规范 + 对向红线 |
-| 通用基线 | `.dsh/contracts/_shared/engineering-baseline.md` | 文档写作通用规则 + 回环期纪律 + "逐字保真只管归档"的边界 |
+| 通用基线 | `.dsh/contracts/_shared/engineering-rules.md` | 文档写作通用规则 + 回环期纪律 + "逐字保真只管归档"的边界 |
 | 编排人格 | `~/.dsh/.agent-presets/agile/agent.cordis.yml` | 派发架构师时附需求原文与本指南；每轮附改动纪律（整体重写 + 净增长 ≤0 + 数值留痕核对）；findings 一次给全；`CONTROL_LOSS` 停止回环 |
 | 方案文档 | `文档 05-设计文档优化方案.md` | §七 回环过程的内容修订策略（五个失控点 + 四轮验算） |
 | 变更台账 | `{{paths.changelog}}`（各项目自建） | 一行一版 |

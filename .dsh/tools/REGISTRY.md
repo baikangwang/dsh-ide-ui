@@ -1,7 +1,14 @@
 # 能力脚本登记册（`.dsh/tools/`）
 
-> **生成物，不要手改**——改 `dev/sync-tools.mjs` 的 `TOOLS` 常量后跑
-> `node dev/gen-tool-registry.mjs` 重新生成。一致性校验：`node dev/gen-tool-registry.mjs --check`。
+> **生成物，不要手改。**
+>
+> **本册由模式仓库统一生成后随 `.dsh/` 交付**；生成器与分发器都是**模式仓库的运维脚本，
+> 不随交付件走**，所以这里不写它们的路径——写了就是让读者去找一个拿不到的文件
+> （这正是本模式一路在堵的**悬空引用**）。
+>
+> 你要做的只有一件事：**本册的内容与 `.dsh/tools/` 里实际的文件集不一致时，
+> 报给编排者**，由模式仓库侧重新生成并分发。**不要在本项目里手改本册**——
+> 手改会被下一次分发覆盖，而且会让"登记册=事实"这个前提失效。
 >
 > 生成日期：2026-09-20　｜　在役 **18** 支
 
@@ -24,38 +31,38 @@
 
 | 脚本 | 用途 | 角色 |
 |---|---|---|
-| `lib-numfingerprint.mjs` | 数值指纹的唯一定义处 | QA |
-| `lib-traces.mjs` | 修订痕迹（D10）判定的唯一定义处 | QA |
-| `num-diff.mjs` | 原稿 vs 重写稿的数值指纹全量对撞（比 verify-rewrite.mjs 更细的粒度） | QA |
+| `lib-numfingerprint.mjs` | 数值指纹的唯一定义处 | 全体·纪律 |
+| `lib-traces.mjs` | 修订痕迹（D10）判定的唯一定义处 | 全体·纪律 |
+| `num-diff.mjs` | 原稿 vs 重写稿的数值指纹全量对撞（比 verify-rewrite.mjs 更细的粒度） | 全体·纪律 |
 | `verify-rewrite.mjs` | 清洗/重写产物的零丢失校验器（零模型参与） | 架构师、QA、首席分析师 |
 
 ### 缺陷与结构检测
 
 | 脚本 | 用途 | 角色 |
 |---|---|---|
-| `analyze-flatten.mjs` | 「表格拍扁」病灶分析器（先分析，不修）。 | QA |
-| `check-03-claims.mjs` | `docs/03-实施记录.md` 的数据正确性核验器。 | QA |
-| `detect-gaps.mjs` | B 类「结论缺失型」检测（零模型参与） | QA |
-| `find-empty-table-body.mjs` | 「表体被删」扫描——`416` §6.2 暴露的病灶。 | QA |
-| `ref-existence-check.mjs` | 数据正确性（可机械核验的那一类）：文档引用的文件路径，现在还在不在。 | QA |
-| `row-duplication.mjs` | 表格碎片与重复的精确定位（修 `430` 时确立的判据，比 table-integrity 的粗判据可靠）。 | QA |
-| `selfcheck-10q.mjs` | 交付前自查 10 问 · 机械化审计（`design-standard.md` §七 原文为准）。 | QA |
-| `table-integrity.mjs` | 表格结构完整性审计——内容层判据，与数值判据互补。 | QA |
+| `analyze-flatten.mjs` | 「表格拍扁」病灶分析器（先分析，不修）。 | 全体·纪律 |
+| `check-03-claims.mjs` | `docs/03-实施记录.md` 的数据正确性核验器。 | 全体·纪律 |
+| `detect-gaps.mjs` | B 类「结论缺失型」检测（零模型参与） | 全体·纪律 |
+| `find-empty-table-body.mjs` | 「表体被删」扫描——`416` §6.2 暴露的病灶。 | 全体·纪律 |
+| `ref-existence-check.mjs` | 数据正确性（可机械核验的那一类）：文档引用的文件路径，现在还在不在。 | 全体·纪律 |
+| `row-duplication.mjs` | 表格碎片与重复的精确定位（修 `430` 时确立的判据，比 table-integrity 的粗判据可靠）。 | 全体·纪律 |
+| `selfcheck-10q.mjs` | 交付前自查 10 问 · 机械化审计（`design-standard.md` §七 原文为准）。 | 全体·纪律 |
+| `table-integrity.mjs` | 表格结构完整性审计——内容层判据，与数值判据互补。 | 全体·纪律 |
 
 ### 度量与口径
 
 | 脚本 | 用途 | 角色 |
 |---|---|---|
-| `lib-lines.mjs` | 行数与体量口径的唯一定义处（零模型参与） | 架构师、QA、首席分析师 |
-| `measure-netgrowth.mjs` | B 类净增长测量：扣除新增章节后，其余部分不得增长 | 架构师、QA |
-| `measure-section-growth.mjs` | B 类「净增长」的逐节对账器（零模型参与） | QA |
+| `lib-lines.mjs` | 行数与体量口径的唯一定义处（零模型参与） | 架构师、全体·纪律、首席分析师 |
+| `measure-netgrowth.mjs` | B 类净增长测量：扣除新增章节后，其余部分不得增长 | 架构师、全体·纪律 |
+| `measure-section-growth.mjs` | B 类「净增长」的逐节对账器（零模型参与） | 全体·纪律 |
 
 ### 代码门禁与台账
 
 | 脚本 | 用途 | 角色 |
 |---|---|---|
 | `code-gate.mjs` | 把可形式化的代码判据下沉为脚本（P1b，对应 QA C2–C6） | 开发专家、QA |
-| `ledger-check.mjs` | 运行台账的格式校验（P3c） | QA |
+| `ledger-check.mjs` | 运行台账的格式校验（P3c） | 全体·纪律 |
 
 ### 占位符与自检
 
@@ -74,14 +81,15 @@
   `ref-integrity-check.mjs`、`code-gate-check.mjs`、`lib-lines-check.mjs`
   （这三支在 `.dsh/tests/`，**随 `.dsh/` 交付**——它们探的是交付件本身，在任何消费项目里都有意义。）
 
-> **不随交付件走的开发脚本在仓库根 `dev/`**，共 7 支，分两类：
+> **不随交付件走的开发脚本在模式仓库的 `dev/`**，分两类。**下列名字只用于说明"登记册为什么没有它们"，
+> 你在本项目的 `.dsh/` 里找不到它们——那是设计如此，不是漏拷。**
 >
-> **① 模式运维**（第八轮移出）：`adapt-project.mjs`（从模式仓库发往目标项目）、
-> `sync-tools.mjs`（把正本分发到兄弟项目）、`gen-tool-registry.mjs`（生成本册）。
-> **它们的输入是"模式仓库 + 兄弟项目"，不是某个项目自己的产物。**
+> **① 模式运维**（第八轮移出）：发往目标项目、把正本分发到**调用方显式指定的**目标、生成本册。
+> **它们的输入是"模式仓库 + 被显式指定的目标项目"，不是某个项目自己的产物**；
+> 且**不由模式仓库自动发现任何项目**（2026-09-20 起：目标必须由调用方给出）。
 >
-> **② 本机环境探针**（第七轮移出）：`preset-health-check-a1.mjs`、
-> `persona-schema-check.mjs`、`workspace-env-check.mjs`、`_dsh-install.mjs`。
+> **② 本机环境探针**（第七轮移出）：预设挂载、人格 schema、工作区 `.env`、安装探测。
+> **它们探的是"这台机器上的 harness 与工作区"，与交付件无关。**
 > **它们探的是本机 harness 预设与兄弟目录**，换个环境即失效。
 >
 > **两类都不登记在本册里**——本册只登记随模式交付的能力脚本。
@@ -113,7 +121,7 @@
 > 以及 9 支存量清洗工具（`cleanup-docs` / `cleanup-queue` / `audit-cleaned` / `normalize-docs` /
 > `batch-swap-docs` / `fix-flattened-tables` / `adjudicate-values` / `value-retention` / `audit-criteria`）
 > 也已删除——**理由同上：它们只服务于存量文档的一次性整治，整治完成即为死资产。**
-> **`gate-standard.md` 的「工具触发规则」里持续适用的常规质量评测一律保留。**
+> **`_shared/qa-common.md` 的「工具触发规则」里持续适用的常规质量评测一律保留。**
 
 ## 与 preset 的关系（诚实说明）
 
@@ -127,6 +135,6 @@
 
 - `verify-rewrite.mjs`：正则从中文编号里会抓出伪影（如从 `docs/552` 抓出 `D-2`）。
   **工具已内置"真缺失 / 伪影"分类，只看第 2b 节"真缺失"列。**
-- `dev/sync-tools.mjs`：副本带两行副本头（含生成时间戳），**比对时必须忽略头部时间戳**，
-  否则每次同步都报"全部不一致"。该逻辑已修（只比正文，并比头部第 1 行的路径）。
+- **分发比对**（模式仓库侧的运维动作，本项目不涉及）：副本带两行副本头（含生成时间戳），
+  **比对时必须忽略头部时间戳**，否则每次分发都报"全部不一致"。该逻辑已修（只比正文，并比头部第 1 行的路径）。
 

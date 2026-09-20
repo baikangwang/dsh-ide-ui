@@ -113,10 +113,19 @@
 | 模式 | 正本（本仓库） | 交付到目标的位置 |
 |---|---|---|
 | 敏捷 | `.dsh/contracts/` | `<目标>/.dsh/contracts/` |
-| 调研 | `.dsh/contracts-research/` | `<目标>/.dsh/contracts/` |
+| 调研 | `.dsh/contracts/_shared/`（**共享部分，先交付**）+ `.dsh/contracts-research/`（**调研增量，后覆盖**） | `<目标>/.dsh/contracts/` |
 
 **目标项目一侧永远是扁平的 `.dsh/contracts/<role>/`。** 模式区分只存在于本仓库，
 所以**两个 preset 的角色路径都不需要感知模式**——只有交付工具需要。
+
+> **共享契约在调研模式下也要交付**（2026-09-20 第十二轮补）。调研模式的通用基线、QA 通用检查契约、
+> workspace 通用约定与敏捷模式是**同一批内容**，此前各自抄一份，实测漂成三份互不一致的副本：
+> 调研侧 `_shared/engineering-rules.md` 成了**零引用的死文件**（两个预设都不挂它），
+> 而真正被注入的 `research-rules.md` 是同一批内容的**第三份**手写副本；
+> `qa/gate-standard.md` 调研版**整节缺失** P8 / 最小留存台账 / P9 / 工具触发规则，
+> 且长期保留着敏捷侧已推翻的旧回环停止条件。
+> 现在**契约正本只放一处**：`.dsh/contracts/_shared/`。交付顺序有意义——先共享、后模式专属，后者可覆盖同名文件。
+> 这条不变量由 `dev/contract-parity-check.mjs` 守着（唯一性 / 可达性 / 自包含 / 无死文件）。
 
 > **为什么不能像以前那样**：调研契约原先住在 `D:\working\projects\dsh\.dsh\contracts\`，
 > 而 `dsh` 是一个**被调研的对象项目**，不是模式的家。后果是部署调研模式只能从 `dsh`
@@ -176,7 +185,7 @@ node dev/adapt-project.mjs doctor <目标项目根>                            #
 
 | 文件 | 作用 |
 |---|---|
-| `.dsh/contracts/README.md` | 敏捷契约的结构单一事实源（角色切分依据、所有权表、目录约定） |
+| `.dsh/contracts/_shared/contract-conventions.md` | 契约结构的单一事实源（目录约定、两态划分、角色切分依据、所有权表、回环控制律）——**两模式共用一份** |
 | `.dsh/tools/REGISTRY.md` | 能力脚本登记册（生成物；**在模式仓库根**执行 `node dev/gen-tool-registry.mjs` 重生成） |
 | `dev/adapt-project.mjs` | 交付与体检工具（**模式运维脚本，不随 `.dsh/` 交付**） |
 | `.dsh/tools/lib-lines.mjs` | 行数口径**唯一定义处**（别处不得自行实现行数） |

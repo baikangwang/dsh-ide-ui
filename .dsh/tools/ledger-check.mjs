@@ -1,4 +1,5 @@
-#!/usr/bin/env node
+// ⚠️ 本文件是 agent-mode 仓库 .dsh/tools/ledger-check.mjs 的**副本**。正本：agent-mode 仓库 .dsh/tools/ledger-check.mjs。
+// 副本生成时间：2026-09-20T09:07:20.327Z
 /**
  * ledger-check.mjs — 运行台账的**格式**校验（P3c）
  *
@@ -6,7 +7,7 @@
  *
  * ## 它检查什么、不检查什么
  *
- * **检查**：表头字段是否齐全、每行是否 9 列、日期/链 id/FAIL 分布的格式是否可解析、
+ * **检查**：表头字段是否齐全、每行是否 11 列、日期/链 id/FAIL 分布/置信度/判据异议的格式是否可解析、
  * 有没有重复的链 id。目的是让台账**能被机器读取**——格式一乱，P9 的"哪条判据反复失守"
  * 就算不出来，台账就退化成一堆散文。
  *
@@ -63,9 +64,14 @@ if (!existsSync(LEDGER)) {
   process.exit(0)
 }
 
-const FIELDS = ['日期', '链 id', '起止', '档位', '派发', '重派', '轮次', '结论', 'FAIL 分布']
+const FIELDS = ['日期', '链 id', '起止', '档位', '派发', '重派', '轮次', '结论', 'FAIL 分布', '置信度', '判据异议']
 const GRADES = ['A0', 'A1', 'A2简', 'A2标准', 'A2深']
 const VERDICTS = ['通过', '升级用户', '未闭环']
+// P8 安全通道的两个落点（2026-09-20 第十二轮补）：契约 `_shared/qa-common.md`「不确定性的安全通道（P8）」
+// 明说 `confidence` 与 `criterion_issue` **进运行台账**，而本工具的 FIELDS 原先只有 9 列、**没有这两列**
+// ——**契约要求台账承载它，工具却禁止多列**。后果是链式的：P9 的规则复审没有第一手输入，
+// 文档里那句"四问盘点因台账无数据答不了"**不是数据还没积累，是这条通道结构上不通**。
+const CONFIDENCES = ['high', 'medium', 'low']
 
 const lines = readFileSync(LEDGER, 'utf8').split('\n')
 const problems = []
@@ -83,7 +89,7 @@ if (headIdx < 0) {
   console.error('  → 台账格式已偏离规范，检查它是否被改写或标题被吞。')
   process.exit(1)
 }
-notes.push('表头在第 ' + (headIdx + 1) + ' 行，9 个字段齐全')
+notes.push('表头在第 ' + (headIdx + 1) + ' 行，' + FIELDS.length + ' 个字段齐全')
 
 // ── 逐行校验数据行（跳过表头与分隔行）───────────────────────────────────────
 const seen = new Set()
@@ -101,7 +107,7 @@ for (let i = headIdx + 1; i < lines.length; i++) {
     problems.push(where + '：应有 ' + FIELDS.length + ' 列，实得 ' + cells.length + ' 列')
     continue
   }
-  const [date, id, span, grade, dispatch, redispatch, rounds, verdict, fails] = cells
+  const [date, id, span, grade, dispatch, redispatch, rounds, verdict, fails, confidence, criterionIssue] = cells
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) problems.push(where + '：日期格式应为 YYYY-MM-DD，实得「' + date + '」')
   if (!/^\d{8}-\d{2}$/.test(id)) problems.push(where + '：链 id 格式应为 YYYYMMDD-NN，实得「' + id + '」')
   if (seen.has(id)) problems.push(where + '：链 id 重复「' + id + '」')
@@ -117,6 +123,14 @@ for (let i = headIdx + 1; i < lines.length; i++) {
   if (!VERDICTS.includes(verdict)) problems.push(where + '：结论应为 ' + VERDICTS.join('/') + '，实得「' + verdict + '」')
   if (fails !== '无' && !/^[\w-]+×\d+(,[\w-]+×\d+)*$/.test(fails)) {
     problems.push(where + '：FAIL 分布应形如「D8×2,D13×1」或「无」，实得「' + fails + '」')
+  }
+  // P8 两列：`confidence` 只取自三个枚举值；`criterion_issue` 记**次数**（没有该报的写 0）。
+  // 不校验它们的"真实性"——与本节其余列一致，**格式校验不冒充内容校验**。
+  if (!CONFIDENCES.includes(confidence)) {
+    problems.push(where + '：置信度应为 ' + CONFIDENCES.join('/') + '（QA 本轮报告自己填的值），实得「' + confidence + '」')
+  }
+  if (!/^\d+$/.test(criterionIssue)) {
+    problems.push(where + '：判据异议应记**次数**（没有该报的写 0），实得「' + criterionIssue + '」')
   }
 }
 
