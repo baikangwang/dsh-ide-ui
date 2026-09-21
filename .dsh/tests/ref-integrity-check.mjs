@@ -262,13 +262,40 @@ for (const file of TARGETS) {
           }
         }
       }
-      if (basenameOf(tok).endsWith('.mjs')) continue
+      // ── 命令上下文里的脚本路径（2026-09-20 新增）──────────────────────────
+    // **为什么单列这一段**：下面 L265 对 `.mjs` 结尾的 token 直接 `continue`，
+    // 于是 `node tools/verify-rewrite.mjs` 这类**按模式仓库根写的相对路径**
+    // 一个都不查——而消费项目根下并没有 `tools/`，角色照着跑必然
+    // `Cannot find module`。实测命中三处（已修正）。
+    //
+    // **判据（严格限定命令上下文，避免误伤散文）**：
+    //   ① 同一行里该 token 紧跟在 `node`（或 python/bash/pwsh）之后；且
+    //   ② token 以脚本扩展名结尾；且
+    //   ③ 不以 `.dsh/` 开头、也不是已解析的 `{{paths.*}}`；且
+    //   ④ 同行未标注作用域为模式仓库。
+    {
+      // 此处 `tok` 可能还带着命令前缀（本块在 L267 剥离之前），先自己剥一次。
+      const bare = tok.replace(/^(node|python3?|bash|pwsh|sh)\s+/, '').split(/\s+/)[0]
+      const lineHasScope = /模式仓库|不随\s*`?\.dsh\/?`?\s*交付|不随交付|只在模式|消费项目不需要|模式仓库专用/.test(ln)
+      const isScriptPath = /\.(mjs|js|cjs|py|sh|ps1|ts)$/i.test(bare)
+      const unresolved = !bare.startsWith('.dsh/') && !bare.startsWith('{{')
+      const cmd = new RegExp('(?:^|[\\s`(（])(?:node|python3?|bash|pwsh|sh)\\s+`?' + bare.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+      if (cmd.test(ln) && isScriptPath && unresolved && !lineHasScope) {
+        failures.push(`${where}  \`${tok}\` —— 命令里按模式仓库根写路径，未经 \`{{paths.*}}\` 解析，消费项目里必然指不到（若确属模式仓库专用，须在同一行标注"模式仓库"）`)
+      }
+    }
+
+    // ── 原有的守卫（必须保留）──────────────────────────────────────────────
+    // 非 `.dsh/` 开头的 token 不进下面的存在性检查：它们要么是 profile 键、
+    // 要么是项目自有路径，在模式仓库里查不到属正常。
+    if (!tok.startsWith('.dsh/')) continue
+
+    if (basenameOf(tok).endsWith('.mjs')) continue
 
       tok = tok.replace(/^node\s+/, '').replace(/^(cd|cat|ls|pwsh|bash)\s+/, '').trim()
       tok = tok.split(/\s+/)[0]
       tok = tok.replace(/#.*$/, '') // 去掉 markdown 锚点：.md#D8 → .md
-      if (!tok.startsWith('.dsh/')) continue
-      if (NOT_A_PATH.test(tok)) continue
+        if (NOT_A_PATH.test(tok)) continue
       tok = tok.replace(/[.,;:）)】]+$/, '')
 
       const abs = join(ROOT, tok)
