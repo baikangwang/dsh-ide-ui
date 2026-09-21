@@ -2,12 +2,12 @@
 > 来源基线（**模式仓库 agent-mode 的历史溯源，目标项目不需要 `baseline/`**）：baseline/project/agents/部署专家.md、baseline/global/rules/04-部署与验证.mdc、baseline/project/rules/Git提交编码规范.mdc
 > 注入时机：编排者调度到「部署专家」阶段 / 部署操作时
 
-> **项目专属取值一律来自 `.dsh/profile.yaml`**（2026-09-18 修订）。占位符 `{{paths.*}}` / `{{tech_stack.*}}` 解析到对应键。
+> **项目专属取值一律来自 `.dsh/profile.yaml`**。占位符 `{{paths.*}}` / `{{tech_stack.*}}` 解析到对应键。
 > **`profile.yaml` 未声明 `deploy` 的项目（如本仓库 agent-mode），本契约整体不适用**——由架构师在接入时判定并说明，不留着不执行。
 
-## 三段职责必须分清（2026-09-18 修订）
+## 三段职责必须分清
 
-此前本契约自相矛盾：一处称"真实 K8s 部署执行属排他（Jenkins 负责）"，另一处又规定部署专家远程跑 `kubectl` 并验证 rollout。现明确为三段：
+三段职责必须互斥，各自归口如下：
 
 | 段 | 归属 | 内容 |
 |---|---|---|
@@ -21,12 +21,7 @@
 - 排他：Jenkins 流水线配置、真实 K8s 部署执行（由 Jenkins 负责）；AI 仅写 Makefile/编排定义
 - **禁止写入**：`{{paths.source}}`、`{{paths.docs}}`
 
-## 部署形态分派（**先判形态，再套结构**；2026-09-20 新增）
-
-> **本节修的是 2026-09-18 那次修订留下的另一半。** 那次把 compute-core 的字面量换成了占位符（"填空，不照抄"），
-> **但没有区分部署形态**——下面的 Makefile 形状是**容器/服务部署**的形状，却被当成通用形状。
-> 后果：**非容器项目（VSIX 扩展、NSIS/安装包、npm 包、纯本机工具）接入后，产物里会留下未解析的 `{{deploy.registry}}` 字面量**。
-> 这比写错更隐蔽——写错至少是个真值（只是不对），未解析的占位符是**一句没有意义的话**，而判据会照常给出"通过"。
+## 部署形态分派（**先判形态，再套结构**）
 
 **先看 `profile.yaml` 的 `deploy` 段，据 `platform` / `kind` 判形态：**
 
@@ -46,12 +41,8 @@
 > **下面只给"形状"，不给取值。** 四个变量（`REGISTRY` / `IMAGE` / `SERVICE` / `PLATFORM`）
 > 以及 build/clean 命令**一律取自 `profile.yaml` 与目标项目现有 Makefile**。
 >
-> **2026-09-18 修订**：本节此前把 compute-core 的字面量当作"标准结构"——
-> `harbor-local.unicloudsrv.com/moove`、`uca-compute-core`、`./gradlew build -x test`、`./gradlew clean`。
-> 后果具体：**非该技术栈的项目接入后，本节要么原样照抄（写进错的仓库地址），要么整节作废**。
-> 现在是"填空"，不是"照抄"。
 >
-> **2026-09-20 补充**：本节**仅适用于 A 形态**。B 形态项目**不要套用本节的镜像目标**——见下节。
+> 本节**仅适用于 A 形态**。B 形态项目**不要套用本节的镜像目标**——见下节。
 
 ```makefile
 REGISTRY ?= {{deploy.registry}}          # 目标项目的制品仓库
@@ -103,7 +94,7 @@ clean:
 ## 关键约束
 - build：`{{tech_stack.build}}`；**项目未声明构建系统时本项判「不适用」，不是 FAIL**
 - 制品构建：多架构 buildx + push；**构建命令与产物路径取自 profile 的 `tech_stack.build`**，
-  不预设 jar/镜像层细节（原写死 `--build-arg JAR_FILE=build/libs/*.jar`，只对 Gradle 项目成立）
+  不预设 jar/镜像层细节（`--build-arg JAR_FILE=build/libs/*.jar` 只对 Gradle 项目成立）
   - 开发版 tag：$(REGISTRY)/$(IMAGE):$(VERSION).$(GIT_COMMIT)
   - 正式版 tag：$(REGISTRY)/$(IMAGE):$(VERSION)
 - 部署（通过 {{paths.remote_entry}}）：按目标项目的编排方式执行；**本契约不预设 kubectl**
