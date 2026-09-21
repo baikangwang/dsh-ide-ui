@@ -1,5 +1,4 @@
-// ⚠️ 本文件是 agent-mode 仓库 .dsh/tools/ref-existence-check.mjs 的**副本**。正本：agent-mode 仓库 .dsh/tools/ref-existence-check.mjs。
-// 副本生成时间：2026-09-21T02:28:49.470Z
+#!/usr/bin/env node
 /**
  * 数据正确性（可机械核验的那一类）：**文档引用的文件路径，现在还在不在**。
  *

@@ -1,5 +1,4 @@
-// ⚠️ 本文件是 agent-mode 仓库 .dsh/tools/measure-netgrowth.mjs 的**副本**。正本：agent-mode 仓库 .dsh/tools/measure-netgrowth.mjs。
-// 副本生成时间：2026-09-21T02:28:49.470Z
+#!/usr/bin/env node
 /**
  * B 类净增长测量：**扣除新增章节后，其余部分不得增长**
  *

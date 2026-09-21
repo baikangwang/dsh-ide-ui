@@ -1,5 +1,4 @@
-// ⚠️ 本文件是 agent-mode 仓库 .dsh/tools/ledger-check.mjs 的**副本**。正本：agent-mode 仓库 .dsh/tools/ledger-check.mjs。
-// 副本生成时间：2026-09-21T02:28:49.470Z
+#!/usr/bin/env node
 /**
  * ledger-check.mjs — 运行台账的**格式**校验（P3c）
  *
@@ -7,7 +6,7 @@
  *
  * ## 它检查什么、不检查什么
  *
- * **检查**：表头字段是否齐全、每行是否 11 列、日期/链 id/FAIL 分布/置信度/判据异议的格式是否可解析、
+ * **检查**：表头字段是否齐全、每行是否 12 列、日期/链 id/起止/等待启动/FAIL 分布/置信度/判据异议的格式是否可解析、
  * 有没有重复的链 id。目的是让台账**能被机器读取**——格式一乱，P9 的"哪条判据反复失守"
  * 就算不出来，台账就退化成一堆散文。
  *
@@ -42,7 +41,7 @@ function declaredLedger() {
 }
 
 // ── 台账字段与枚举（提到最前：GQM 判据要先于台账存在性检查使用 FIELDS）────────
-const FIELDS = ['日期', '链 id', '起止', '档位', '派发', '重派', '轮次', '结论', 'FAIL 分布', '置信度', '判据异议']
+const FIELDS = ['日期', '链 id', '起止', '等待启动', '档位', '派发', '重派', '轮次', '结论', 'FAIL 分布', '置信度', '判据异议']
 const GRADES = ['A0', 'A1', 'A2简', 'A2标准', 'A2深']
 const VERDICTS = ['通过', '升级用户', '未闭环']
 // P8 安全通道的两个落点（2026-09-20 第十二轮补）：契约 `_shared/qa-common.md`「不确定性的安全通道（P8）」
@@ -135,12 +134,18 @@ for (let i = headIdx + 1; i < lines.length; i++) {
     problems.push(where + '：应有 ' + FIELDS.length + ' 列，实得 ' + cells.length + ' 列')
     continue
   }
-  const [date, id, span, grade, dispatch, redispatch, rounds, verdict, fails, confidence, criterionIssue] = cells
+  const [date, id, span, wait, grade, dispatch, redispatch, rounds, verdict, fails, confidence, criterionIssue] = cells
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) problems.push(where + '：日期格式应为 YYYY-MM-DD，实得「' + date + '」')
   if (!/^\d{8}-\d{2}$/.test(id)) problems.push(where + '：链 id 格式应为 YYYYMMDD-NN，实得「' + id + '」')
   if (seen.has(id)) problems.push(where + '：链 id 重复「' + id + '」')
   seen.add(id)
   if (!/^\d{2}:\d{2}[–-]\d{2}:\d{2}$/.test(span)) problems.push(where + '：起止格式应为 HH:MM–HH:MM，实得「' + span + '」')
+  // P7 拆分项（2026-09-20 补）：**排队段**——链被提出到开始派发之间等了多久。
+  // 它是延迟的**直接观测**（方案 §P7 原文：「不依赖任何理论」），与"起止"是两个量：
+  // 起止记的是**链开始跑之后**的时间，答不了"启动前排了多久队"。
+  if (wait !== '—' && !/^\d+(m|h)(\d+m)?$/.test(wait)) {
+    problems.push(where + '：等待启动应形如「45m」/「2h」/「2h10m」（未记录写「—」），实得「' + wait + '」')
+  }
   if (!GRADES.includes(grade)) problems.push(where + '：档位应为 ' + GRADES.join('/') + '，实得「' + grade + '」')
   for (const [name, v] of [['派发', dispatch], ['重派', redispatch]]) {
     if (!/^\d+$/.test(v)) problems.push(where + '：' + name + '应为整数，实得「' + v + '」')

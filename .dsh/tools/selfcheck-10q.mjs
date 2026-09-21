@@ -1,5 +1,4 @@
-// ⚠️ 本文件是 agent-mode 仓库 .dsh/tools/selfcheck-10q.mjs 的**副本**。正本：agent-mode 仓库 .dsh/tools/selfcheck-10q.mjs。
-// 副本生成时间：2026-09-21T02:28:49.470Z
+#!/usr/bin/env node
 /**
  * 交付前自查 10 问 · 机械化审计（`design-standard.md` §七 原文为准）。
  *
