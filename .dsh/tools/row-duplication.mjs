@@ -1,5 +1,4 @@
-// ⚠️ 本文件是 agent-mode 仓库 .dsh/tools/row-duplication.mjs 的**副本**。正本：agent-mode 仓库 .dsh/tools/row-duplication.mjs。
-// 副本生成时间：2026-09-20T09:07:20.327Z
+#!/usr/bin/env node
 /**
  * 表格碎片与重复的**精确定位**（修 `430` 时确立的判据，比 table-integrity 的粗判据可靠）。
  *

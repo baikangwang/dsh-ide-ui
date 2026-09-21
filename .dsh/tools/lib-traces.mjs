@@ -1,5 +1,3 @@
-// ⚠️ 本文件是 agent-mode 仓库 .dsh/tools/lib-traces.mjs 的**副本**。正本：agent-mode 仓库 .dsh/tools/lib-traces.mjs。
-// 副本生成时间：2026-09-20T09:07:20.327Z
 /**
  * lib-traces.mjs — 修订痕迹（D10）判定的**唯一定义处**
  *

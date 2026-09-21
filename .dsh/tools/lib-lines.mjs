@@ -1,5 +1,4 @@
-// ⚠️ 本文件是 agent-mode 仓库 .dsh/tools/lib-lines.mjs 的**副本**。正本：agent-mode 仓库 .dsh/tools/lib-lines.mjs。
-// 副本生成时间：2026-09-20T09:07:20.327Z
+#!/usr/bin/env node
 /**
  * lib-lines.mjs — **行数与体量口径的唯一定义处**（零模型参与）
  *

@@ -1,5 +1,4 @@
-// ⚠️ 本文件是 agent-mode 仓库 .dsh/tools/ledger-check.mjs 的**副本**。正本：agent-mode 仓库 .dsh/tools/ledger-check.mjs。
-// 副本生成时间：2026-09-20T09:07:20.327Z
+#!/usr/bin/env node
 /**
  * ledger-check.mjs — 运行台账的**格式**校验（P3c）
  *
@@ -41,8 +40,45 @@ function declaredLedger() {
   return { value: null, why: '.dsh/profile.yaml 未声明 paths.run_ledger' }
 }
 
+// ── 台账字段与枚举（提到最前：GQM 判据要先于台账存在性检查使用 FIELDS）────────
+const FIELDS = ['日期', '链 id', '起止', '档位', '派发', '重派', '轮次', '结论', 'FAIL 分布', '置信度', '判据异议']
+const GRADES = ['A0', 'A1', 'A2简', 'A2标准', 'A2深']
+const VERDICTS = ['通过', '升级用户', '未闭环']
+// P8 安全通道的两个落点（2026-09-20 第十二轮补）：契约 `_shared/qa-common.md`「不确定性的安全通道（P8）」
+// 明说 `confidence` 与 `criterion_issue` **进运行台账**，而本工具的 FIELDS 原先只有 9 列、**没有这两列**
+// ——**契约要求台账承载它，工具却禁止多列**。后果是链式的：P9 的规则复审没有第一手输入，
+// 文档里那句"四问盘点因台账无数据答不了"**不是数据还没积累，是这条通道结构上不通**。
+const CONFIDENCES = ['high', 'medium', 'low']
+
 const arg = process.argv[2]
 const declared = declaredLedger()
+
+// ── GQM 判据（2026-09-20 新增）：台账的每一列都必须能连回一个 Question ────────
+// 依据：`docs/敏捷管理理论基础调研报告-v2.0` §5.1（GQM，Basili & Weiss 1981）对本仓库的硬要求——
+//   「本仓库若要做度量，第一步必须是 GQM 的 Goal 层，而不是选指标……
+//     没有这一行的度量，按 GQM 的判断，从一开始就是无效度量。」
+// `_shared/metrics-gqm.md` 承载 Goal→Question→Metric 对照；**台账加了列而没人问它回答什么问题，
+// 这里必须报错**——否则那张表会漂成摆设（本仓库反复出现"文档声称与文件不符"的那类失效）。
+// 本项**先于台账存在性检查**执行：它判的是**契约面**，与"本项目有没有历史数据"无关。
+{
+  const GQM = join(ROOT, '.dsh', 'contracts', '_shared', 'metrics-gqm.md')
+  if (!existsSync(GQM)) {
+    console.error('✗ GQM 契约缺失：' + GQM)
+    console.error('  → 台账的每一列都必须连回一个 Question（GQM）。该文件缺失说明本项目 `.dsh/` 未同步。')
+    console.error('  → 修复：从 agent-mode 重新同步交付面（`node tools/adapt-project.mjs init <项目> --force` 或等价流程）。')
+    process.exit(1)
+  }
+  const gqmText = readFileSync(GQM, 'utf8')
+  const orphan = FIELDS.filter((f) => !gqmText.includes(f))
+  if (orphan.length) {
+    console.error('✗ GQM 判据未过：台账有 ' + orphan.length + ' 列回答不了任何 Question——' + orphan.join(' / '))
+    console.error('  → 这些列已被采集，但**没有任何 Goal/Question 用到它**，按 GQM 属无效度量。')
+    console.error('  → 修复：在 `.dsh/contracts/_shared/metrics-gqm.md` 的 Metric 列补上它，写明它回答哪个 Question；')
+    console.error('     若它确实没有用途，就从台账与 FIELDS 里删掉——**不要留一个没人问的列**。')
+    process.exit(1)
+  }
+}
+
 if (!arg && declared.value === 'none') {
   console.log('[ledger] N/A：本项目声明 `paths.run_ledger: none`（尚未启用运行台账）')
   console.log('        这不是通过，是"不适用"——启用时把该键改为实际路径即可。')
@@ -63,15 +99,6 @@ if (!existsSync(LEDGER)) {
   console.log('        落点来自：' + (arg ? '命令行参数' : declared.why))
   process.exit(0)
 }
-
-const FIELDS = ['日期', '链 id', '起止', '档位', '派发', '重派', '轮次', '结论', 'FAIL 分布', '置信度', '判据异议']
-const GRADES = ['A0', 'A1', 'A2简', 'A2标准', 'A2深']
-const VERDICTS = ['通过', '升级用户', '未闭环']
-// P8 安全通道的两个落点（2026-09-20 第十二轮补）：契约 `_shared/qa-common.md`「不确定性的安全通道（P8）」
-// 明说 `confidence` 与 `criterion_issue` **进运行台账**，而本工具的 FIELDS 原先只有 9 列、**没有这两列**
-// ——**契约要求台账承载它，工具却禁止多列**。后果是链式的：P9 的规则复审没有第一手输入，
-// 文档里那句"四问盘点因台账无数据答不了"**不是数据还没积累，是这条通道结构上不通**。
-const CONFIDENCES = ['high', 'medium', 'low']
 
 const lines = readFileSync(LEDGER, 'utf8').split('\n')
 const problems = []

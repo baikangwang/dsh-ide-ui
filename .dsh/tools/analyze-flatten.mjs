@@ -1,5 +1,4 @@
-// ⚠️ 本文件是 agent-mode 仓库 .dsh/tools/analyze-flatten.mjs 的**副本**。正本：agent-mode 仓库 .dsh/tools/analyze-flatten.mjs。
-// 副本生成时间：2026-09-20T09:07:20.327Z
+#!/usr/bin/env node
 /**
  * 「表格拍扁」病灶**分析器**（先分析，不修）。
  *

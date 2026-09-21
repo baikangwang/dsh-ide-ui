@@ -1,5 +1,4 @@
-// ⚠️ 本文件是 agent-mode 仓库 .dsh/tools/table-integrity.mjs 的**副本**。正本：agent-mode 仓库 .dsh/tools/table-integrity.mjs。
-// 副本生成时间：2026-09-20T09:07:20.327Z
+#!/usr/bin/env node
 /**
  * 表格结构完整性审计——**内容层判据，与数值判据互补**。
  *

@@ -1,5 +1,4 @@
-// ⚠️ 本文件是 agent-mode 仓库 .dsh/tools/detect-gaps.mjs 的**副本**。正本：agent-mode 仓库 .dsh/tools/detect-gaps.mjs。
-// 副本生成时间：2026-09-20T09:07:20.327Z
+#!/usr/bin/env node
 /**
  * detect-gaps.mjs — B 类「结论缺失型」检测（零模型参与）
  *
