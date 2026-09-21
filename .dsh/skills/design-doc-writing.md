@@ -475,4 +475,3 @@ node {{paths.tools}}verify-rewrite.mjs --original <原稿> --rewrite <改后稿>
 | 方案文档 | `文档 05-设计文档优化方案.md` | §七 回环过程的内容修订策略（五个失控点 + 四轮验算） |
 | 变更台账 | `{{paths.changelog}}`（各项目自建） | 一行一版 |
 | 核对工具 | `{{paths.tools}}verify-rewrite.mjs` / `{{paths.tools}}num-diff.mjs` | 改前 vs 改后的零丢失核对与数值指纹对撞（均为零模型参与，**只报告不修改**） |
-
