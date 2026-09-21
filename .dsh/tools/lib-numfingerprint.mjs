@@ -1,3 +1,5 @@
+// ⚠️ 本文件是 agent-mode 仓库 .dsh/tools/lib-numfingerprint.mjs 的**副本**。正本：agent-mode 仓库 .dsh/tools/lib-numfingerprint.mjs。
+// 副本生成时间：2026-09-21T02:28:49.470Z
 /**
  * lib-numfingerprint.mjs — 数值指纹的**唯一定义处**
  *

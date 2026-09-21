@@ -1,4 +1,5 @@
-#!/usr/bin/env node
+// ⚠️ 本文件是 agent-mode 仓库 .dsh/tools/verify-rewrite.mjs 的**副本**。正本：agent-mode 仓库 .dsh/tools/verify-rewrite.mjs。
+// 副本生成时间：2026-09-21T02:28:49.470Z
 /**
  * verify-rewrite.mjs — 清洗/重写产物的零丢失校验器（零模型参与）
  *

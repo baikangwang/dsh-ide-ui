@@ -1,4 +1,5 @@
-#!/usr/bin/env node
+// ⚠️ 本文件是 agent-mode 仓库 .dsh/tools/ledger-check.mjs 的**副本**。正本：agent-mode 仓库 .dsh/tools/ledger-check.mjs。
+// 副本生成时间：2026-09-21T02:28:49.470Z
 /**
  * ledger-check.mjs — 运行台账的**格式**校验（P3c）
  *

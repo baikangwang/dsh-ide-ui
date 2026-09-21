@@ -1,4 +1,5 @@
-#!/usr/bin/env node
+// ⚠️ 本文件是 agent-mode 仓库 .dsh/tools/code-gate.mjs 的**副本**。正本：agent-mode 仓库 .dsh/tools/code-gate.mjs。
+// 副本生成时间：2026-09-21T02:28:49.470Z
 /**
  * code-gate.mjs — 把可形式化的代码判据下沉为脚本（P1b，对应 QA C2–C6）
  *

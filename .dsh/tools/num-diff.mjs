@@ -1,4 +1,5 @@
-#!/usr/bin/env node
+// ⚠️ 本文件是 agent-mode 仓库 .dsh/tools/num-diff.mjs 的**副本**。正本：agent-mode 仓库 .dsh/tools/num-diff.mjs。
+// 副本生成时间：2026-09-21T02:28:49.470Z
 /**
  * num-diff.mjs — 原稿 vs 重写稿的数值指纹全量对撞（比 verify-rewrite.mjs 更细的粒度）
  *
