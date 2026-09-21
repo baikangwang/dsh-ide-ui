@@ -4,13 +4,11 @@ description: deepseek-harness-UI（npm 包 dsh-ide-ui）工程知识：单包双
 whenToUse: 在 deepseek-harness-UI 项目做开发 / 构建 / 部署 / 发布 / 排障，需要项目级工程上下文时。
 ---
 
-# deepseek-harness-ui-engineering — 项目级 skill（形态 C，按需加载）
+# deepseek-harness-ui-engineering — 项目级 skill（按需加载）
 
 > 属性：项目级（`.dsh/skills/` 官方发现根）。
-> **本文只写本项目专属事实**；通用方法论见 `.dsh/contracts/_shared/engineering-baseline.md`，
+> **本文只写本项目专属事实**；通用方法论见 `.dsh/contracts/_shared/engineering-rules.md`，
 > 声明式取值见 `.dsh/profile.yaml`，文档写法见 skill `design-doc-writing`，脚本用法见 skill `agile-toolkit`。
-> 事实来源与核验时间：2026-09-19，按 `README.md` / `packages/ide/package.json` / `packages/ide/tsdown.config.ts` /
-> `dsh-release.json` / `docs/{architecture,deployment,cicd}.md` / `scripts/verify-ide-plugin.ps1` / `git` 实测。
 
 ## 1. 项目概览
 
@@ -27,9 +25,8 @@ whenToUse: 在 deepseek-harness-UI 项目做开发 / 构建 / 部署 / 发布 / 
 **"单包、双面"是本项目最重要的结构事实**：一个 npm 包同时携带
 Host 半（`ide` Remote 能力服务：文件系统 / git / 搜索 / 系统操作）与浏览器半
 （侧栏 + 编辑器 UI），经官方 `sidebar.workspaces` / `conversation.view` 槽位组合，
-**零官方源码修改**。历史上曾是 `dsh-ide-ui` + `dsh-client-ide-ui` 两个包，
-现已合并；`scripts/verify-ide-plugin.ps1` 里有专门的检查项保证旧包不再出现
-（`dsh-client-ide-ui removed`、`patch has no ui-ide row`）。
+**零官方源码修改**。发布物是单个 npm 包；`scripts/verify-ide-plugin.ps1` 里有专门的
+检查项保证旧包名不再出现（`dsh-client-ide-ui removed`、`patch has no ui-ide row`）。
 
 ## 2. 目录与写域纪律
 
@@ -68,15 +65,13 @@ packages/ide/
 ## 3. 构建：tsdown 自包含，三产物
 
 ```sh
-npm --prefix packages/ide run build       # = tsdown，实测 2026-09-19 退出码 0，约 3 秒
+npm --prefix packages/ide run build       # = tsdown，实测退出码 0，约 3 秒
 npm --prefix packages/ide run typecheck   # = tsc --noEmit，实测退出码 0
 corepack pnpm build                       # 规范写法（需 pnpm 在 PATH 上；本机没有）
 ```
 
-- **为什么 `build` 不写 `pnpm build`**：`.dsh/profile.yaml` 的 `build` 键会被 code-gate 的 C5
-  **真的执行**并取退出码。本机 `pnpm --version` 是 CommandNotFound，写 `pnpm build` 会让 C5 FAIL。
-  workspace 只有 `packages/ide` 一个包，直接跑该包的 build 脚本与根
-  `pnpm -r --filter './packages/*' build` 等价。
+- **`.dsh/profile.yaml` 的 `build` 键必须写 `npm --prefix packages/ide run build`**：该键会被
+  code-gate 的 C5 **真的执行**并取退出码；本机没有 pnpm，写 `pnpm build` 会让 C5 FAIL。
 - **产物三件**：`lib/index.js`（Host 半）、`lib/invariant.js`、`lib/client.js`（浏览器半 CJS bundle），
   外加 `lib/types/**` 与 `lib/typert.*`（Typert 协议产物，只在 `@Remote` 接口面变化时重新生成）。
 - **装饰器降级是本项目构建的核心难点**（`tsdown.config.ts` 顶部有完整说明）：官方流水线先 `tsc`
@@ -108,7 +103,7 @@ npm pack packages/ide            # → dist/dsh-ide-ui-<version>.tgz
   解压后跑 `scripts/offline/install-dsh-ide-ui.ps1`（默认装到 `~/.dsh/profiles/web`，可 `-ProfileName`）。
 - **生效条件不对称（实测结论）**：**Host 半改动必须完全重启 `dsh web` 进程，刷新页面不够**；
   浏览器半改动刷新页面即可。
-- **`scripts/verify-ide-plugin.ps1` 的边界，必须知道**（2026-09-19 读全文）：
+- **`scripts/verify-ide-plugin.ps1` 的边界，必须知道**：
   - 它**绑定本机固定路径** `$env:USERPROFILE\.dsh\profiles\web` 与**固定版本** `0.1.0-rc.20`
     （检查 `client bundle id`、`version is rc.20`、`fallback junctions >= 190` 等 30 项）。
   - 因此它**不是可以随手跑的自检**：profile 名不同或版本 bump 后，不改脚本就会假红。
@@ -148,11 +143,7 @@ node scripts/dsh-release.mjs            # 交互；agent 场景：--yes；预演
 1. **`.dsh/tools/` 是副本，不要手改**。它们是 agent-mode 仓库 `.dsh/tools/` 的副本（文件头两行写着正本位置
    与生成时间）。改了副本会造成"同一判据在不同项目给出不同答案"的**副本漂移**。要改进工具，
    走模式仓库的正本 + `node dev/sync-tools.mjs` 分发。
-2. **本项目的 `.dsh/profile.yaml` 曾被整份写成另一个项目（compute-core / Java 8 / Spring Boot / Gradle /
-   MyBatis-Plus / Harbor / K8s）的事实**，2026-09-19 迁移时按本项目实测重写。
-   遗留的外来项目级 skill `compute-core-engineering.md` 已在备份后移除（备份在
-   `.dsh/tmp/2026-09-19-batch2-backup/dsh-old/skills/`）。
-   **接入/复制 `.dsh/` 时务必逐份核对身份**——这种错误的特征是"契约与 profile 都在，
+2. **接入/复制 `.dsh/` 时务必逐份核对身份**：写错的特征是"契约与 profile 都在、
    检查也照常出结论"，不会自己报错。
 3. **`.gitignore` 第 5 行是 `.dsh/`**，整个交付件被忽略、无法提交（`git ls-files .dsh` 为空）。
    `.gitignore` 里也**没有** `.env` 规则，`.env` 显示为未跟踪。修法见 `profile.yaml` 的

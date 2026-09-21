@@ -1,5 +1,4 @@
-# contracts/developer — 开发专家契约与规则（形态 B，按角色注入）
-> 来源基线（**模式仓库 agent-mode 的历史溯源，目标项目不需要 `baseline/`**）：baseline/project/agents/开发专家.md、baseline/project/rules/项目规则.mdc、baseline/global/rules/03-工程规范.mdc、05-单元测试.mdc
+# contracts/developer — 开发专家契约与规则（按角色注入）
 > 注入时机：编排者调度到「开发专家」阶段 / 编码实施时
 
 > **项目专属取值一律来自 `.dsh/profile.yaml`**。本契约只写**如何做**，不写**本项目是什么**。

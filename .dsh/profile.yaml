@@ -1,16 +1,9 @@
 # ============================================================
-# 敏捷模式（agile）— 本项目骨架声明（形态 A）
+# 敏捷模式（agile）— 本项目骨架声明
 #
 # 契约只写"如何检查"，具体取值一律来自本文件与项目级 skill；
 # **换项目时改本文件，不改契约**。
 #
-# ⚠️ 2026-09-19 迁移订正：本文件此前的内容**整个属于另一个项目 compute-core**
-#    （project: agent-mode-compute-core、Java 8 / Spring Boot 2.2.7 / Gradle /
-#     MyBatis-Plus / RabbitMQ+Kafka / Harbor / K8s / 端口 40201）——
-#    本项目是 TypeScript + pnpm 的 DSH Web UI 插件，两套事实没有一个字重合。
-#    这跟 zsvirt 头部自述的"整目录拷来导致身份是错的"是同一类错误。
-#    现已按 package.json / pnpm-workspace.yaml / tsconfig.base.json /
-#    packages/ide/package.json / .git / docs/ 逐项实测重写。
 # ============================================================
 meta:
   kind: agile-project
@@ -51,12 +44,9 @@ tech_stack:
   tsconfig: tsconfig.base.json              # target es2024 / module esnext / strict / noEmit
   jsx: react-jsx                            # packages/ide/tsconfig.json
   # build **只放"能跑通的那一行命令"**，不放工具名（tsdown 是工具名，见 build_tool）。
-  # 为什么不是 `pnpm build`：根 package.json 的 build 是
-  #   `pnpm -r --filter './packages/*' build`，而**本机 PATH 上没有 pnpm**
-  #   （2026-09-19 实测 `pnpm --version` → CommandNotFound）；
-  #   code-gate 的 C5 会真的执行这个字符串并拿退出码，写 `pnpm build` 会直接 FAIL。
-  # 本 workspace 只有 packages/ide 一个包，所以直接跑该包的 build 脚本即等价，且实测通过：
-  #   2026-09-19 `npm --prefix packages/ide run build` → 退出码 0（tsdown 0.22.14 三产物构建完成）。
+  # code-gate 的 C5 会真的执行这个字符串并取退出码。**本机 PATH 上没有 pnpm**，
+  # 写 `pnpm build` 会直接 FAIL；build 必须写
+  # `npm --prefix packages/ide run build`（实测退出码 0，tsdown 三产物构建完成）。
   # 若 pnpm 已在 PATH 上，`pnpm build` / `corepack pnpm build`（corepack 实测 11.7.0）同样成立。
   build: npm --prefix packages/ide run build
   build_tool: tsdown                        # 工具名另立键，不占 build
@@ -71,7 +61,7 @@ tech_stack:
     #    **不要把这个键读成"本项目有单元测试"。**
     unit: node .dsh/tests/ref-integrity-check.mjs
     framework: none
-    typecheck: npm --prefix packages/ide run typecheck        # tsc --noEmit，实测 2026-09-19 退出码 0
+    typecheck: npm --prefix packages/ide run typecheck        # tsc --noEmit，实测退出码 0
     integration: powershell -ExecutionPolicy Bypass -File scripts/verify-ide-plugin.ps1   # 30 项部署后环境验证（需已装进 profile）
   # QA 代码审计 C2 检查项（**必须是路径前缀列表**，按前缀匹配变更文件）。
   # ⚠️ 列表项**不能写行尾注释**：code-gate.mjs 的列表解析器不像标量那样剥掉 `# …`，
@@ -119,22 +109,22 @@ checks:
   code_gate_three_state: node .dsh/tests/code-gate-check.mjs
   plugin_env: powershell -ExecutionPolicy Bypass -File scripts/verify-ide-plugin.ps1   # 装进 profile 后必须全绿
 
-# 安全/约束红线 —— 2026-08-25 v2 起不再由引擎守卫读取（agile-dev-host 已删除）。
-# 红线改为契约规则（_shared/engineering-rules.md 分支管理 + deployer/deploy-standard.md 远程入口），
-# 编排人格 + 角色契约要求模型遵守；工具层由 dsh 原生 sandbox 模式 + approval 兜底。
-# 下方为项目事实声明（实测 2026-09-19，供契约/人工作为依据）：
+# 安全/约束红线 —— 不由引擎守卫读取，承载于契约规则
+# （_shared/engineering-rules.md 分支管理 + deployer/deploy-standard.md 远程入口），
+# 由编排人格 + 角色契约要求模型遵守；工具层由 dsh 原生 sandbox 模式 + approval 兜底。
+# 下方为项目事实声明（实测，供契约/人工作为依据）：
 security:
   branch_policy:
     stable_branch: master                   # 实测 git symbolic-ref HEAD = refs/heads/master（**不是 main**）
     ai_forbidden_branches: [master]
     ai_allowed: [develop, feature-*, fix-*]
-    conflict_resolution: 本仓检出 master 而红线禁 master；**2026-09-20 用户裁决授权在 master 上提交**。授权状态变化时改这一行。
+    conflict_resolution: 本仓检出 master 而红线禁 master；**用户裁决授权在 master 上提交**。授权状态变化时改这一行。
   git_remote:
     origin: https://github.com/baikangwang/dsh-ide-ui.git   # 单远端（实测 git remote -v）
     note: 公开仓库；AI 不推 master，推送目标按用户当次指定
   credentials:
     managed_by: dsh                         # 凭证经 DSH credentials 解析引用，规则文件只写 credential:<KEY>
-    env_file: .env                          # 项目根 .env（141B，2026-09-19 实测**只有两行注释，无任何凭证**）
+    env_file: .env                          # 项目根 .env（141B，实测**只有两行注释，无任何凭证**）
   delivery_gap:                             # ⚠️ 交付件进不了版本库（只报告，本次不改 .gitignore）
     note: >-
       .gitignore 第 5 行是 `.dsh/`，整个 .dsh/ 被忽略（git check-ignore 确认 .gitignore:5:.dsh/），

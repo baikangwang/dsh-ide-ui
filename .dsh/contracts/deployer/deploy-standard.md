@@ -1,5 +1,4 @@
-# contracts/deployer — 部署专家契约与规则（形态 B，按角色注入）
-> 来源基线（**模式仓库 agent-mode 的历史溯源，目标项目不需要 `baseline/`**）：baseline/project/agents/部署专家.md、baseline/global/rules/04-部署与验证.mdc、baseline/project/rules/Git提交编码规范.mdc
+# contracts/deployer — 部署专家契约与规则（按角色注入）
 > 注入时机：编排者调度到「部署专家」阶段 / 部署操作时
 
 > **项目专属取值一律来自 `.dsh/profile.yaml`**。占位符 `{{paths.*}}` / `{{tech_stack.*}}` 解析到对应键。
@@ -87,9 +86,9 @@ clean:
 | 安装/分发路径 | 分发方式有据可查（离线安装命令、Release 附件等） | 未声明 ⇒ 判「不适用」 |
 | **字面量泄漏** | 生成物全文无 `{{`（见上文硬判据 2） | —— **永远适用，不可判"不适用"** |
 
-> **本仓库实测的两类翻车**（都是"产物内容完整性"）：
-> ① `dsh-vscode-agent` 的 `.vscodeignore` 若排除 `out/`，包内 `package.json` 的 `main` 指向的 `./out/extension.js` 就不存在——**分发物不含任何可运行代码**（0.1.23 QA-D23-02 订正）。
-> ② `deepseek-harness-desktop` 的 NSIS 安装包为 per-user 覆盖安装，**"部署成功"不等于"旧版本被清干净"**，须核对安装目录残留。
+> **两类必查**（都属"产物内容完整性"）：
+> ① **分发物必须真的含可运行代码**——逐条核对打包排除规则，确认 `main` 等入口指向的文件在包内存在。
+> ② **"部署成功"不等于"旧版本被清干净"**——per-user 覆盖安装尤其要核对安装目录残留。
 
 ## 关键约束
 - build：`{{tech_stack.build}}`；**项目未声明构建系统时本项判「不适用」，不是 FAIL**

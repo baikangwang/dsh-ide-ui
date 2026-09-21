@@ -1,5 +1,4 @@
-# contracts/tester — 测试专家契约与规则（形态 B，按角色注入）
-> 来源基线（**模式仓库 agent-mode 的历史溯源，目标项目不需要 `baseline/`**）：baseline/project/agents/测试专家.md、baseline/global/rules/05-单元测试.mdc
+# contracts/tester — 测试专家契约与规则（按角色注入）
 > 注入时机：编排者调度到「测试专家」阶段 / 测试执行时
 
 ## 职责与边界
@@ -99,9 +98,7 @@
 > **单测入口一律取 `tech_stack.test.unit`**——`gradlew test --tests "全限定类名"` 这类写死形式**只对 Gradle 项目成立**，对本模式自身的 `javascript`/`node` 形态、以及任何非 JVM 项目都不成立。**项目未声明单测入口时，本项判「不适用」，不是 FAIL。**
 
 > **集成 / 端到端入口取 `tech_stack.test.integration`**。
-> **这一行的必要性**：上表只有「单元」与「全量」两行，而「测试类型选择」表（上文）明确覆盖「涉及多模块/用户可见 → 端到端测试」——
-> 即**契约要求跑端到端，却没有告诉测试角色命令从哪个键取**。后果实测发生过：某消费项目有 17 个端到端脚本（含 `test_e2e_server.py`、
-> `regression_test.py`），profile 里却写 `integration: none` 并标注「端到端入口未核实」——**契约没有取用点，这个键自然没人去核实**。
+> **契约要求跑端到端时，命令必须从这个键取**——没有取用点，这个键就不会有人去核实。
 > **判据**：项目确实存在集成/端到端套件而 `tech_stack.test.integration` 为 `none` 或缺失时，**测试角色必须判「未核实」并去查实**，不得默认「不适用」。
 > 项目经查确实没有该套件时才写 `none`（据实为「不适用」，不是 FAIL）。
 

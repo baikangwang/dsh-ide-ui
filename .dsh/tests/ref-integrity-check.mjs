@@ -84,6 +84,30 @@ const INLINE = /`([^`\n]+)`/g
 const PLACEHOLDER = /\{\{\s*([a-z_][a-z0-9_.]*)\s*\}\}/gi
 // 不该当成"路径"的：含通配、花括号枚举、尖括号占位、竖线、或明显是命令/正则的
 const NOT_A_PATH = /[*<>|\\^$()[\],{}]|\s-\w|::/
+/**
+ * 模式仓库**独有**的开发工作区——只有它无歧义，因此只有它能直接当判据。
+ *
+ * 判据是"读者打不开"，不是"文件不存在"：`baseline/` 在模式仓库里好好的，
+ * 但消费项目只拿到 `.dsh/` + `.env`，对它而言就是**不存在的路径**。
+ *
+ * ⚠️ **为什么只收 `baseline/`，不收 `docs/` 与 `dev/`**（这是本判据最容易被写错的地方）：
+ *   - `docs/` 在消费项目里**是正经目录**——调研报告、根因分析就写在那儿
+ *     （`analysis-standard.md`：「正式产出：`docs/`（调研报告 / 根因分析 / 方案 / 决策记录）」）。
+ *     按路径禁 `docs/` 会**误伤调研模式的核心产出目录**。
+ *   - `dev/` 同理：`HelpDocToolkit` 自己就有一个 `dev/`（实测）。
+ *   即：**同一个字符串在两个语境下指两个不同的东西，路径形态不足以区分**。
+ *   真正的区分量是**上下文**（旁边写没写"模式仓库"），那是语义判断，正则做不到。
+ *
+ * 所以分工是：
+ *   - 本条管**无歧义**的 `baseline/`；
+ *   - `理论报告` / `来源基线` / `敏捷管理理论基础调研报告` 这类**唯一指向模式仓库**的记号，
+ *     由 `dev/prompt-prose-check.mjs` 的 L6 判（它扫的是记号，不是路径）；
+ *   - 「模式仓库的 `docs/`」这种**同行自带限定语**的，靠 L6 的同族规则与人工复核。
+ *
+ * **不把有歧义的东西写成硬判据**——那会把"抓得准"换成"抓得多"，
+ * 而误报会让人开始给闸门打补丁，最后闸门失效。
+ */
+const NON_DELIVERABLE_REF = /^baseline\//
 // 临时产物目录：闭环删除后为空是正常的，不参与存在性判定
 const WORK_DIRS = ['.dsh/tmp', '.dsh/reports']
 
@@ -272,17 +296,72 @@ for (const file of TARGETS) {
     //   ① 同一行里该 token 紧跟在 `node`（或 python/bash/pwsh）之后；且
     //   ② token 以脚本扩展名结尾；且
     //   ③ 不以 `.dsh/` 开头、也不是已解析的 `{{paths.*}}`；且
-    //   ④ 同行未标注作用域为模式仓库。
+    //   ③b **首段不是本项目 `profile.paths.*` 声明过的目录，且该路径在项目里确实不存在**；且
+    //   ④ 同行（或紧邻的上一行）未标注作用域为模式仓库。
+    //
+    // ── ③b / ④ 是 2026-09-21 补的，补的是**假阳性**（不是放宽门槛）─────────────
+    // 原判据把「不以 `.dsh/` 开头的裸相对路径」一律当成"按模式仓库根写的"。
+    // 实测在三类合法写法上误报：
+    //   a. `dsh-vscode-agent` 的 `paths.tests: scripts/` ⇒ `node scripts/sim.mjs` 是**它自己的**脚本；
+    //   b. `teamcodingknowledge` 的仓库根 `tools/ssh_remote.py` **真实存在**，但没被
+    //      `paths.*` 的任何一个键覆盖（`paths.tools` 指的是 `.dsh/tools/`）；
+    //   c. `zsvirt` 已经把作用域写在**上一行**（"…在**模式仓库**的 `dev/` 下，`不随 .dsh/ 交付`："），
+    //      命令分行书写，而原判据只看同一行。
+    //
+    // **判据必须去查它自己声称的后果。** 原文写的是「消费项目里**必然指不到**」——
+    // 那就别推断，直接 `existsSync` 问一句"指得到吗"。这比从 `profile` 反推更直接、
+    // 也更不会误伤：**路径存不存在是可判定的事实，声明没声明只是线索。**
+    // 两条信号取"或"：**项目声明了这个目录** 或 **这个文件真的在那儿**，都算它自己的。
+    //
+    // **为什么必须修判据而不是给这 8 行加"模式仓库"标注**：
+    // 那不是修复，那是**为了骗过闸门而写的假话**——`scripts/sim.mjs`、`tools/ssh_remote.py`
+    // 根本不是模式仓库的文件，标注成"模式仓库专用"就是把一条真信息写成假信息。
+    // 一次这样的"补标注"，这条判据的语义就脏了：以后真出现模式仓库相对路径时，
+    // 读者无法区分"真·模式仓库路径"与"为了消警写的标注"。**判据有歧义就该改判据。**
     {
       // 此处 `tok` 可能还带着命令前缀（本块在 L267 剥离之前），先自己剥一次。
       const bare = tok.replace(/^(node|python3?|bash|pwsh|sh)\s+/, '').split(/\s+/)[0]
-      const lineHasScope = /模式仓库|不随\s*`?\.dsh\/?`?\s*交付|不随交付|只在模式|消费项目不需要|模式仓库专用/.test(ln)
+      // 作用域标注可以写在**这一行**，也可以写在**紧邻的上一行**（命令常分行书写）。
+      // 与「禁止清单」用 `PROHIBITION_WINDOW` 看上文是同一个道理：**语义以句为单位，不以行为单位。**
+      const prevLn = idx > 0 ? lines[idx - 1] : ''
+      const SCOPE_RE = /模式仓库|不随\s*`?\.dsh\/?`?\s*交付|不随交付|只在模式|消费项目不需要|模式仓库专用/
+      const lineHasScope = SCOPE_RE.test(ln) || SCOPE_RE.test(prevLn)
       const isScriptPath = /\.(mjs|js|cjs|py|sh|ps1|ts)$/i.test(bare)
       const unresolved = !bare.startsWith('.dsh/') && !bare.startsWith('{{')
+      // 本项目 profile 声明的 paths.* 取值里，所有**相对目录的首段**。
+      // 例：`paths.tests: scripts/` ⇒ `scripts`；`paths.docs: docs/design/` ⇒ `docs`。
+      // `none` / 绝对路径 / `{{...}}` 一律跳过——它们不构成"本项目的相对目录"。
+      const ownDirs = new Set(
+        Object.entries(profile)
+          .filter(([k, v]) => k.startsWith('paths.') && typeof v === 'string')
+          .map(([, v]) => v.trim())
+          .filter((v) => v && v.toLowerCase() !== 'none' && !v.startsWith('{{') && !/^[A-Za-z]:/.test(v) && !v.startsWith('/'))
+          .map((v) => v.replace(/\\/g, '/').replace(/^\.\//, '').split('/')[0])
+          .filter(Boolean),
+      )
+      const relBare = bare.replace(/\\/g, '/').replace(/^\.\//, '')
+      // 信号一：目录被 profile 声明过；信号二：**文件真的在本项目里存在**。
+      const belongsToProject = ownDirs.has(relBare.split('/')[0]) || existsSync(join(ROOT, relBare))
       const cmd = new RegExp('(?:^|[\\s`(（])(?:node|python3?|bash|pwsh|sh)\\s+`?' + bare.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
-      if (cmd.test(ln) && isScriptPath && unresolved && !lineHasScope) {
+      if (cmd.test(ln) && isScriptPath && unresolved && !belongsToProject && !lineHasScope) {
         failures.push(`${where}  \`${tok}\` —— 命令里按模式仓库根写路径，未经 \`{{paths.*}}\` 解析，消费项目里必然指不到（若确属模式仓库专用，须在同一行标注"模式仓库"）`)
       }
+    }
+
+    // ── 契约不得引用非交付件（2026-09-21 用户裁决新增）──────────────────────
+    // **判据一句话：契约里出现的路径，读者必须打得开。**
+    // 消费项目只拿到 `.dsh/` + `.env`，模式仓库的 `dev/`、`docs/`、`baseline/`
+    // 对它们**不存在**。引用它们不是"信息多一点"，后果是具体的两条：
+    //   ① 读者打不开 → 那句话在他那里**无法核实**，等于一句无依据的断言；
+    //   ② 他会去找 → 在项目里搜一个不存在的文件，**这是悬空引用的制造过程**。
+    //
+    // ⚠️ **这一条补的是一个"闸门自己开的口子"**：下面 `if (!tok.startsWith('.dsh/')) continue`
+    // 把所有不以 `.dsh/` 开头的 token 一律放行，于是 `baseline/…`、`docs/…`
+    // **从来没被检查过**——而它们恰恰是最常见的一类坏引用（实测 32 行）。
+    // 泛化经验：**"只检查某前缀"这个过滤条件本身就是一个覆盖面声明，
+    // 它的补集是"不设防区"，不是"没问题区"。**
+    if (isContract && NON_DELIVERABLE_REF.test(tok)) {
+      failures.push(`${where}  \`${tok}\` 指向模式仓库的开发工作区，不是交付件——消费项目打不开。改为就地给出简短描述，或删掉该引用`)
     }
 
     // ── 原有的守卫（必须保留）──────────────────────────────────────────────
@@ -306,11 +385,10 @@ for (const file of TARGETS) {
     }
 
     // ── 来源基线的作用域 ─────────────────────────────────────────────────
-    if (/^>\s*来源基线/.test(ln) && ln.includes('baseline/')) {
-      if (!ln.includes('模式仓库')) {
-        failures.push(`${where}  来源基线未标注"模式仓库"——消费项目会去找不存在的 baseline/`)
-      }
-    }
+    // 2026-09-21 起 `来源基线` 行本身已从全部契约中删除（它指向模式仓库的 `baseline/`，
+    // 消费项目打不开），"来源基线"这种注释形式一并废弃。
+    // 因此这里不再校验它带没带"模式仓库"标注——**没有它才是对的**。
+    // 若它回流，由 `dev/prompt-prose-check.mjs` 的 L6 与上面的非交付件引用检查拦下。
   })
 }
 
