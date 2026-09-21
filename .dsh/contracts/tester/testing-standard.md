@@ -92,10 +92,25 @@
 | 场景 | 命令来源 |
 |---|---|
 | 单元测试 | `tech_stack.test.unit` |
+| **集成 / 端到端测试** | **`tech_stack.test.integration`** |
 | 全量测试 | `tech_stack.test.runner` 对应的全量入口 |
 | 编写测试用例 | 参考 `{{paths.tests}}` 已有风格与 `tech_stack.test.framework` |
 
 > **单测入口一律取 `tech_stack.test.unit`**（2026-09-18 修订）。原文本写死 `gradlew test --tests "全限定类名"`——那是一条**只对 Gradle 项目成立**的指令，对本模式自身的 `javascript`/`node` 形态、以及任何非 JVM 项目都不成立。**项目未声明单测入口时，本项判「不适用」，不是 FAIL。**
+
+> **集成 / 端到端入口取 `tech_stack.test.integration`**（2026-09-20 新增）。
+> **为什么加这一行**：上表此前只有「单元」与「全量」两行，而「测试类型选择」表（上文）明确覆盖「涉及多模块/用户可见 → 端到端测试」——
+> 即**契约要求跑端到端，却没有告诉测试角色命令从哪个键取**。后果实测发生过：某消费项目有 17 个端到端脚本（含 `test_e2e_server.py`、
+> `regression_test.py`），profile 里却写 `integration: none` 并标注「端到端入口未核实」——**契约没有取用点，这个键自然没人去核实**。
+> **判据**：项目确实存在集成/端到端套件而 `tech_stack.test.integration` 为 `none` 或缺失时，**测试角色必须判「未核实」并去查实**，不得默认「不适用」。
+> 项目经查确实没有该套件时才写 `none`（据实为「不适用」，不是 FAIL）。
+
+> **三个键的语义必须分清**（避免第三次混用）：
+> - `tech_stack.test.runner` = **工具名**（`pytest` / `xunit-console` / `vitest`），不是命令；
+> - `tech_stack.test.unit` = **可直接执行的一整行命令**（如 `pytest v7-platform/backend/tests/`）；
+> - `tech_stack.test.integration` = 同上，但作用于集成/端到端套件。
+> 上表「全量测试」一行说的是「取 `runner` 对应的全量入口」——**那是一个由工具名 + 项目约定推出的入口，不是一个现成的键值**；
+> 若项目已把全量入口写成命令，应直接放进 `unit` 或 `integration`，**不要为它新造第四个键**。
 
 ## 报告格式
 ```json

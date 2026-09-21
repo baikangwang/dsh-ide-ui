@@ -110,7 +110,7 @@ check('C5 能解析字面块标量（build: | 后缩进的命令）', f6.s.C5 ==
 // C2 落到「不在声明的前缀内」→ 判 **N/A**。
 //
 // **为什么这条最阴**：N/A 在本模式里合法且**不阻断**，所以表现是
-// 「门禁通过、结论看起来正常」——缺陷被静默吞掉，而不是报错。
+// 「检查通过、结论看起来正常」——缺陷被静默吞掉，而不是报错。
 // deepseek-harness-UI 接入时实测复现（作者给列表项加了行尾注释，C2 静默降级）。
 // 修法是让两个分支同口径；这条断言保证它不会退回去。
 const f7 = withProfile('meta:\n  kind: agile-project\ntech_stack:\n  build: none\n  package_layout:\n    - src/          # 主源码树\n', 'src/clean.mjs');

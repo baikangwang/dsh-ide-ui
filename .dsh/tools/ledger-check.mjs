@@ -54,7 +54,7 @@ const arg = process.argv[2]
 const declared = declaredLedger()
 
 // ── GQM 判据（2026-09-20 新增）：台账的每一列都必须能连回一个 Question ────────
-// 依据：`docs/敏捷管理理论基础调研报告-v2.0` §5.1（GQM，Basili & Weiss 1981）对本仓库的硬要求——
+// 依据：`敏捷管理理论基础调研报告-v2.0-2026-09-18.md`（**模式仓库 `docs/` 下，不是交付件**） §5.1（GQM，Basili & Weiss 1981）对本仓库的硬要求——
 //   「本仓库若要做度量，第一步必须是 GQM 的 Goal 层，而不是选指标……
 //     没有这一行的度量，按 GQM 的判断，从一开始就是无效度量。」
 // `_shared/metrics-gqm.md` 承载 Goal→Question→Metric 对照；**台账加了列而没人问它回答什么问题，
@@ -65,7 +65,13 @@ const declared = declaredLedger()
   if (!existsSync(GQM)) {
     console.error('✗ GQM 契约缺失：' + GQM)
     console.error('  → 台账的每一列都必须连回一个 Question（GQM）。该文件缺失说明本项目 `.dsh/` 未同步。')
-    console.error('  → 修复：从 agent-mode 重新同步交付面（`node tools/adapt-project.mjs init <项目> --force` 或等价流程）。')
+    // 2026-09-21 修正：此处原写「从 agent-mode 重新同步交付面（`node tools/adapt-project.mjs init <项目> --force`）」。
+    //   **该路径不存在**——同步工具的正本是 `dev/adapt-project.mjs`，`tools/` 下从来没有它，
+    //   而 `dev/` 是模式仓库的运维脚本目录，**不随交付件走**。它在消费项目里必然落空。
+    //   同时它违反 `_shared/contract-conventions.md` 的自定规则「凡是'只在模式仓库存在'的东西，
+    //   契约里一律只描述职责，不写路径」——**交付件的报错文本同样受这条约束**，
+    //   因为它也是"只在模式仓库存在的东西"的指引。故改为只描述职责。
+    console.error('  → 修复：本项目 `.dsh/` 未同步（或同步不完整）。请按项目约定的同步流程重新取用交付面。')
     process.exit(1)
   }
   const gqmText = readFileSync(GQM, 'utf8')

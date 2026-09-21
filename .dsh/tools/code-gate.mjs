@@ -32,7 +32,7 @@
  * | C5 构建 | 跑 `tech_stack.build` 声明的命令 | `build` 为 `none` 或未声明 |
  * | C6 数据访问 | 参数化查询 + ORM 映射文件与接口一致性 | 项目未用 ORM |
  *
- * 只扫描 `--scope` 给出的文件——**这不是全仓库审计工具**，是"变更门禁"。
+ * 只扫描 `--scope` 给出的文件——**这不是全仓库审计工具**，是"变更检查"。
  */
 import { readFileSync, existsSync } from 'node:fs'
 import { join, resolve, relative, sep } from 'node:path'
@@ -128,7 +128,7 @@ function readProfile() {
           // 前缀**带着注释文本**，`packages/ide/src/index.ts` 一个都匹配不上 ——
           // C2 于是落到「变更文件不在声明的 package_layout 前缀内」这一条，
           // 判**「不适用（N/A）」**。而 N/A 在本模式里**不阻断**，
-          // 所以它的表现是「门禁通过、结论看起来正常」，缺陷被静默吞掉。
+          // 所以它的表现是「检查通过、结论看起来正常」，缺陷被静默吞掉。
           //
           // deepseek-harness-UI 接入时实测复现：作者给 `package_layout` 列表项加了行尾注释，
           // C2 静默降级成 N/A；把注释移到列表上方才恢复 PASS。

@@ -18,7 +18,8 @@
 │   ├── _shared/                # 两模式共用的唯一正本（所有角色子代理必读）
 │   │   ├── engineering-rules.md      # 通用方法论基线
 │   │   ├── contract-conventions.md      # 本目录结构的通用约定（两态划分/交付单位/所有权表…）
-│   │   └── qa-common.md                 # QA 通用检查契约（只在派发 QA 时加载）
+│   │   ├── qa-common.md                 # QA 通用检查契约（只在派发 QA 时加载）
+│   │   └── metrics-gqm.md               # Goal→Question→Metric 对照（运行台账 12 列的依据）
 │   ├── architect/              # 架构师契约（设计模板/根因/文档规范/契约维护）
 │   ├── developer/              # 开发专家契约（编码规范/接口契约/包结构）
 │   ├── tester/                 # 测试专家契约（数据驱动/双层断言/报告）
@@ -26,10 +27,17 @@
 │   └── qa/                     # QA 检查标准（敏捷专属 D/C/P 检查项；通用规则见 _shared/qa-common.md）
 ├── skills/                     # 项目级 skill（低频大知识）挂载源（官方 skill-filesystem 发现根）
 ├── tools/                      # 模式能力脚本（随项目分发；用法见 skills，触发见契约）
+│   ├── REGISTRY.md             # 能力脚本登记册（**生成物，不要手改**；增脚本前查复用、增后必登记）
+│   └── *.mjs                   # 在役能力脚本
+├── tests/                      # 交付件自检（3 支：交付自包含 / 行数口径 / 检查三态）
 ├── reports/                    # 临时产物（链级闭环随 .dsh/tmp/ 一并**删除**，不保留永久档案）
 └── tmp/                        # 临时工作区（一次性轮级产物，闭环**删除**）
     ├── architect/  developer/  tester/  deployer/   # 各角色一次性草稿/探针/中间物
     └── audits/                               # QA 每轮审计（中间轮随轮级闭环清理）
 ```
+
+> **本树曾漏列三处，2026-09-21 补**：`_shared/metrics-gqm.md`、`tools/REGISTRY.md`、`tests/`。
+> **漏列不会被任何检查器抓到**——`contract-parity-check` 的死文件检查按**引用关系**判定，不检查目录树完整性。
+> **判据**：目录树是**读者唯一的全景图**；漏列一份在役资产，读者就以为它不存在。
 
 **两态划分（正式产出 vs 临时产物）、交付单位、所有权表、回环控制律**见 `_shared/contract-conventions.md`。
