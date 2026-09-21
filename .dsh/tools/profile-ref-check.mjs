@@ -98,10 +98,15 @@ const missing = [];
 const onlyComment = [];
 for (const [k, files] of [...used].sort()) {
   if (active.has(k)) continue;
-  // 允许父级已声明（如 `paths` 整体）
-  const parent = k.split('.').slice(0, -1).join('.');
-  if (parent && active.has(parent)) continue;
-  if (commented.has(k) || (parent && commented.has(parent))) onlyComment.push([k, files]);
+  // 2026-09-20 修复：此前的「父级已声明就放行」是一条**假绿通道**。
+  //   原代码：`if (parent && active.has(parent)) continue`
+  //   后果：只要 `deploy:` 这个顶层键存在，所有 `{{deploy.*}}` 一律放行——
+  //   哪怕 `deploy.registry` / `deploy.arch` / `deploy.service` 根本不存在。
+  //   实测因此漏掉 2 个项目的 6 处未解析占位符（dsh-vscode-agent、deepseek-harness-desktop），
+  //   而本工具的注释（见文件头）恰恰在警告"未解析的占位符比硬编码更隐蔽"。
+  //   契约里不存在"用整段父键"的写法（全部占位符都是 `a.b` 形式），故兜底没有必要，直接删除。
+  //   父键整体未声明时，检查其本身（如 `{{paths}}`）才有意义——若将来出现这种写法，按精确键处理即可。
+  if (commented.has(k)) onlyComment.push([k, files]);
   else missing.push([k, files]);
 }
 

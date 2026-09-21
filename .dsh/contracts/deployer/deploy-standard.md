@@ -21,7 +21,27 @@
 - 排他：Jenkins 流水线配置、真实 K8s 部署执行（由 Jenkins 负责）；AI 仅写 Makefile/编排定义
 - **禁止写入**：`{{paths.source}}`、`{{paths.docs}}`
 
-## Makefile 标准结构
+## 部署形态分派（**先判形态，再套结构**；2026-09-20 新增）
+
+> **本节修的是 2026-09-18 那次修订留下的另一半。** 那次把 compute-core 的字面量换成了占位符（"填空，不照抄"），
+> **但没有区分部署形态**——下面的 Makefile 形状是**容器/服务部署**的形状，却被当成通用形状。
+> 后果：**非容器项目（VSIX 扩展、NSIS/安装包、npm 包、纯本机工具）接入后，产物里会留下未解析的 `{{deploy.registry}}` 字面量**。
+> 这比写错更隐蔽——写错至少是个真值（只是不对），未解析的占位符是**一句没有意义的话**，而判据会照常给出"通过"。
+
+**先看 `profile.yaml` 的 `deploy` 段，据 `platform` / `kind` 判形态：**
+
+| 形态 | 判定 | 产物 | 走哪一段 |
+|---|---|---|---|
+| **A 容器/服务部署** | `deploy.platform` 非 `none`，且需要制品仓库与服务名 | 镜像 + 编排定义 | 下文「Makefile 标准结构」 |
+| **B 制品分发** | `deploy.platform: none` 或 `deploy.kind` 为 `vscode-extension` / 安装包 / npm 包 | VSIX / NSIS / tgz 等文件 | 本文「B 形态：制品分发」节，**Makefile 镜像目标整节不适用** |
+
+**两条硬判据（对全部形态成立）**：
+1. **`deploy` 段里被契约引用的每个占位符都必须能在 `profile.yaml` 里解析。** 真值是"不适用"时，**据实填 `none`，不得留空、不得删键**——删键不会让契约变"不适用"，只会让字面量泄漏进产物。
+2. **不得把 `{{...}}` 原样带进任何产物。** 交付前对生成的 Makefile/编排定义全文检索 `{{`，命中即 FAIL。
+
+> 本仓库的先例写法（5 个敏捷项目一致）：`registry: none` / `service: none` / `arch: none`，各自附一行"为什么不适用"。
+
+## Makefile 标准结构（**仅 A 形态：容器/服务部署**）
 
 > **下面只给"形状"，不给取值。** 四个变量（`REGISTRY` / `IMAGE` / `SERVICE` / `PLATFORM`）
 > 以及 build/clean 命令**一律取自 `profile.yaml` 与目标项目现有 Makefile**。
@@ -30,6 +50,8 @@
 > `harbor-local.unicloudsrv.com/moove`、`uca-compute-core`、`./gradlew build -x test`、`./gradlew clean`。
 > 后果具体：**非该技术栈的项目接入后，本节要么原样照抄（写进错的仓库地址），要么整节作废**。
 > 现在是"填空"，不是"照抄"。
+>
+> **2026-09-20 补充**：本节**仅适用于 A 形态**。B 形态项目**不要套用本节的镜像目标**——见下节。
 
 ```makefile
 REGISTRY ?= {{deploy.registry}}          # 目标项目的制品仓库
@@ -59,6 +81,24 @@ image.remove:
 clean:
 	@{{tech_stack.clean}}
 ```
+
+## B 形态：制品分发（非容器项目）
+
+**适用**：`deploy.platform: none`，或产物是文件而非镜像——VS Code 扩展（VSIX）、桌面安装包（NSIS/MSI）、npm 包（tgz）、纯本机工具。
+
+**Makefile 的镜像目标（`image.develop.tag` / `image.release.tag` / `image.remove`）整节判「不适用」**，不要为了凑结构把它们写进产物。B 形态的 deploy 职责是**产物完整性**，不是容器编排：
+
+| 检查项 | 判据 | 不适用时 |
+|---|---|---|
+| 打包入口 | `deploy.packager` 或 profile 声明的打包命令存在且可跑 | 无打包入口 ⇒ 判「不适用」，不是 FAIL |
+| 产物命名 | 产物名匹配 `deploy.artifact` | 未声明 ⇒ 判「不适用」 |
+| 产物内容完整性 | 打包排除清单里**不得**排除运行必需物 | 无排除清单 ⇒ 判「不适用」 |
+| 安装/分发路径 | 分发方式有据可查（离线安装命令、Release 附件等） | 未声明 ⇒ 判「不适用」 |
+| **字面量泄漏** | 生成物全文无 `{{`（见上文硬判据 2） | —— **永远适用，不可判"不适用"** |
+
+> **本仓库实测的两类翻车**（都是"产物内容完整性"）：
+> ① `dsh-vscode-agent` 的 `.vscodeignore` 若排除 `out/`，包内 `package.json` 的 `main` 指向的 `./out/extension.js` 就不存在——**分发物不含任何可运行代码**（0.1.23 QA-D23-02 订正）。
+> ② `deepseek-harness-desktop` 的 NSIS 安装包为 per-user 覆盖安装，**"部署成功"不等于"旧版本被清干净"**，须核对安装目录残留。
 
 ## 关键约束
 - build：`{{tech_stack.build}}`；**项目未声明构建系统时本项判「不适用」，不是 FAIL**
