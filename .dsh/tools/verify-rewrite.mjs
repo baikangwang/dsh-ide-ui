@@ -16,6 +16,10 @@
  * 用法：
  *   node tools/verify-rewrite.mjs --original <原文件> --rewrite <重写文件>
  *   node tools/verify-rewrite.mjs --original A --rewrite B --out <报告目录>
+ *
+ * 注：本文中 `§17.x` 的编号沿用原《设计文档写法指南》（旧 `docs/06`）的节号——
+ *   该文档已迁入 skill `design-doc-writing` 并改用中文序号，故 §17.x 属**溯源标注**，
+ *   在现行交付面里查不到对应小节，不是可跳转的引用。
  */
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs'

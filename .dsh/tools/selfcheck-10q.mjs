@@ -19,6 +19,10 @@
  *   Q10 数值留痕核对                          → 已有 verify-rewrite.mjs 的第 2b 节覆盖
  *
  * 用法：node .dsh/tools/selfcheck-10q.mjs [--project dsh] [--top 40] [--projects a,b,c]
+ *
+ * 注：本文中 `§17.x` 的编号沿用原《设计文档写法指南》（旧 `docs/06`）的节号——
+ *   该文档已迁入 skill `design-doc-writing` 并改用中文序号，故 §17.x 属**溯源标注**，
+ *   在现行交付面里查不到对应小节，不是可跳转的引用。
  */
 import { readFileSync, readdirSync, existsSync, statSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join, basename, dirname, resolve } from 'node:path'

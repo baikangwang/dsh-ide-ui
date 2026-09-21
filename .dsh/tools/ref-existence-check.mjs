@@ -23,6 +23,10 @@
  *   路径含 `<占位符>` `*` `…` `~` 的一律**不判定**（不是真路径）。
  *
  * 用法：node .dsh/tools/ref-existence-check.mjs [--project dsh] [--top 30] [--projects a,b,c]
+ *
+ * 注：本文中 `§17.x` 的编号沿用原《设计文档写法指南》（旧 `docs/06`）的节号——
+ *   该文档已迁入 skill `design-doc-writing` 并改用中文序号，故 §17.x 属**溯源标注**，
+ *   在现行交付面里查不到对应小节，不是可跳转的引用。
  */
 import { readFileSync, readdirSync, existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join, dirname, resolve, basename } from 'node:path'
