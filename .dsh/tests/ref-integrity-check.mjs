@@ -563,6 +563,18 @@ const SEC_ALLIN_RE = /^(.{0,300}?)(?:——|—|--)?\s*全部在\s*`([^`\n]*\.md
 /** 节号引用形态 ③：`X.md` §12.6 / `X.md` 的 §12.6 */
 const SEC_NUM_RE = /`([^`\n]*\.md)`\s*(?:的)?\s*(?:第\s*)?§?\s*(\d+(?:\.\d+)*)\s*节?/g
 /**
+ * 章节名引用形态 ④：`X.md` 的**裸章节名**节（不带「」引号、不带 § 号）。
+ *
+ * ⚠️ 为什么必须有这一条：形态①③ 都要求引用"长得像引用"，而真实写法是
+ * > …（见 `engineering-rules.md` 准入节第 1 节）
+ * ——文件在、**节名已搬到别的文件**，形态① 因无引号不触发，形态③ 因节号前隔着
+ * 「准入节」三个字不触发；而 `engineering-rules.md` **恰好有编号子节**，
+ * 就算触发也会被 `nums` 蒙对。**三种形态全躲过去了。**
+ *
+ * 反例（必须放行）：`…必须同步收录本节。` ——「本」+「节」是"本节"，不是章节名。
+ */
+const SEC_BARE_RE = /`([^`\n]*\.md)`\s*的?\s*([\u4e00-\u9fa5A-Za-z0-9]{2,12})(?<![本该此这小大章节个种项门课季时全半分环年月日春佳调军])节(?![号])/g
+/**
  * 豁免：**模式条件引用**——行内点名了模式，那是**路由**，不是悬空。
  *
  * 真实正例（`engineering-rules.md` 的「评审把关」节）：
@@ -612,6 +624,28 @@ for (const abs of [...TARGETS, join(ROOT, '.dsh/README.md')]) {
         failures.push(`${rel}:${i + 1}  节号引用指向 \`${base}\` 的 §${m[2]}，但该文件**没有这一节**`)
       }
     }
+    // 形态④：裸章节名。只在"这一行没有该文件的引号形态引用"时才判——避免同一处报两遍。
+    // ⚠️ 别用 SEC_QUOTED_RE.test()：它带 g 标志，test 会推进 lastIndex，第二次调用起结果不确定。
+    if (!new RegExp(SEC_QUOTED_RE.source).test(line)) {
+      for (const m of line.matchAll(SEC_BARE_RE)) {
+        const base = m[1].split('/').pop()
+        const hit = SECTION_INDEX.get(base)
+        if (!hit || base === own) continue
+        const nm = m[2].trim()
+        // ⚠️ 只用 `===` 与 `startsWith`，**绝不用 `includes`**——
+        //    实测：`engineering-rules.md` 的节名「引用外部结论与改进提案的准入」
+        //    **包含**「准入」，用 includes 就会把 `engineering-rules.md 准入节`
+        //    这条真悬空**蒙对**，判据当场失效（自检形态④抓到）。
+        const ok = hit.phrases.has(nm) || hit.stems.some((s) => s === nm || s.startsWith(nm))
+        if (!ok) {
+          // ⚠️ **形态④ 报 WARN，不报 FAIL。** 裸章节名**没有引号做边界**，
+          //    "四个项目专属小节" 这类写法会被切成 "四个项目专属小"+节（实测误报）。
+          //    继续加排除词永远加不完；正确处置是**让它提示人去看，不阻断闸门**。
+          //    判据的强度必须与它的精度匹配——不精确的判据不配当 FAIL。
+          warnings.push(`${rel}:${i + 1}  章节名引用指向 \`${base}\` 的「${nm}」节，该文件没有这一节——文件名在、节名可能已搬到别的文件（也可能是"小节"类复合词被切错，需人判断）`)
+        }
+      }
+    }
   })
 }
 
@@ -630,21 +664,50 @@ if (process.argv.includes('--self-test')) {
     ['形态① 章节名引用', '见 `qa-common.md`「这个节根本不存在」节。'],
     ['形态② 全部在…', '**甲**——全部在 `qa-common.md`。'],
     ['形态③ 节号引用', '见 `qa-common.md` §99.9 节。'],
+    // 形态④：**本轮真事故的写法**——无引号、无 §、节号前还隔着「准入节」三个字。
+    // 复现原始场景：引用 `engineering-rules.md` 的节名，而那个节名已搬到别的文件。
+    // ⚠️ 形态④ 报 **WARN**（裸章节名没有边界，精度不够当 FAIL）——自检看的是"有没有报出来"，
+    //    不是"是不是 FAIL"，所以这里仍旧成立：**不报出来才是判据失效**。
+    ['形态④ 裸章节名（WARN）', '任何提案**一律不予采纳**（见 `engineering-rules.md` 准入节第 1 节）。'],
+  ]
+  // 必须放行的反例——「本节」不是章节名，不能报。
+  const MUST_PASS = [
+    ['反例「本节」', '本契约的新增项**必须同步收录本节**。'],
+    ['反例「小节」', '**四个项目专属小节**按 profile 声明的技术栈适用。'],
   ]
   let bad = 0
-  for (const [name, body] of CASES) {
+  /**
+   * ⚠️ **必须把"进程正常退出"时的 stdout 也收下来。**
+   *
+   * 原实现是 `try { execFileSync(...) } catch (e) { out = e.stdout }`——
+   * 只在**非零退出**时才读输出。而形态④ 报的是 **WARN 不是 FAIL**（退出码 0，不抛异常），
+   * 于是 `out` 恒为空字符串，自检判「判据失效」——**坏的是自检，不是判据**。
+   *
+   * 差点据此去改一条本身正常的判据。**收证据的管子漏了，看起来和"没有证据"一模一样。**
+   */
+  const runProbe = (body) => {
     writeFileSync(PROBE, `# 探针\n\n${body}\n`, 'utf8')
     let out = ''
     try {
-      execFileSync(process.execPath, [fileURLToPath(import.meta.url)], { cwd: ROOT, encoding: 'utf8' })
+      out = execFileSync(process.execPath, [fileURLToPath(import.meta.url)], { cwd: ROOT, encoding: 'utf8' })
     } catch (e) { out = (e.stdout || '') + (e.stderr || '') }
+    return out
+  }
+  for (const [name, body] of CASES) {
+    const out = runProbe(body)
     // 只看**探针文件**那一节，不看全量——判据要落在被测对象上，不是落在全局上。
     const fired = out.split(/\r?\n/).some((l) => l.includes('zz-ref-selftest.md'))
     if (fired) console.log(`  ✔ ${name} 会红`)
     else { console.log(`  ❌ ${name} **不会红——判据失效**`); bad++ }
   }
+  for (const [name, body] of MUST_PASS) {
+    const out = runProbe(body)
+    const fired = out.split(/\r?\n/).some((l) => l.includes('zz-ref-selftest.md'))
+    if (fired) { console.log(`  ❌ ${name} **误报——判据把正常写法当悬空**`); bad++ }
+    else console.log(`  ✔ ${name} 放行`)
+  }
   if (existsSync(PROBE)) unlinkSync(PROBE)
-  console.log(bad ? `\n[ref-integrity] 自检 FAIL ${bad} 条` : '\n[ref-integrity] 自检 PASS：不变量四可证伪')
+  console.log(bad ? `\n[ref-integrity] 自检 FAIL ${bad} 条` : `\n[ref-integrity] 自检 PASS：不变量四可证伪（${CASES.length} 正例 + ${MUST_PASS.length} 必须放行的反例）`)
   process.exit(bad ? 1 : 0)
 }
 
