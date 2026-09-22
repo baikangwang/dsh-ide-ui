@@ -31,7 +31,7 @@ whenToUse: 需要跑能力脚本核对文档质量（零丢失/数值留痕/表�
 |---|---|---|
 | `lib-traces.mjs` | **修订痕迹（D10）判定的唯一定义处** | 别处判定修订痕迹必须引用它，不得重写正则 |
 | `lib-numfingerprint.mjs` | **数值指纹的唯一定义处** | 端口/字节数/时间戳/PID/epoch/SHA256/inode 的提取规则 |
-| `lib-lines.mjs` | **行数口径的唯一定义处** | `countLines()` / `measure()`。**任何工具要行数必须 import 它，不得自行实现**——实测三种常见实现量出三个数（见 `.dsh/tests/lib-lines-check.mjs`） |
+| `lib-lines.mjs` | **行数口径的唯一实现**（口径条文见 `contract-conventions.md`「行数口径（唯一定义处）」） | `countLines()` / `measure()`。**任何工具要行数必须 import 它，不得自行实现**——实测三种常见实现量出三个数（见 `.dsh/tests/lib-lines-check.mjs`） |
 
 > **这三支是"判据的判据"**——改了它们等于改了所有下游工具的判定口径。修改须走架构师（契约与判据所有者）。
 

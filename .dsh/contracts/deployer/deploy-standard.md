@@ -111,13 +111,14 @@ clean:
 4. 新脚本写入对应功能目录（tools/、scripts/、deploy/）
 5. 禁止临时脚本散落根目录、重复实现已有功能
 
-## 经验教训
-| # | 教训 | 规则 |
-|---|------|------|
-| 1 | platform 格式 | linux.amd64 需转 linux/amd64 供 Docker buildx |
-| 2 | JAR 文件 | 使用 build/libs/*.jar 通配，避免硬编码版本号 |
-| 3 | 多架构 | buildx 需 docker buildx create --use 预先创建 builder |
-| 4 | K8s 部署 | 通过 {{paths.remote_entry}}，不直接 ssh |
+## 容器构建的四条硬约束
+
+| # | 约束 | 违反后果 |
+|---|------|---------|
+| 1 | `platform` 写 `linux.amd64` 时须转成 `linux/amd64` 才交给 Docker buildx | buildx 不识别，构建直接失败 |
+| 2 | 制品路径用 `build/libs/*.jar` 通配，不硬编码版本号 | 版本一升就取不到 JAR |
+| 3 | 多架构构建前先 `docker buildx create --use` 建好 builder | 缺 builder，多架构构建失败 |
+| 4 | K8s 部署一律走 `{{paths.remote_entry}}`，不直接 ssh | 绕过受管入口，违反安全红线 |
 
 ## 部署报告
 写入 `.dsh/tmp/deployer/deploy_{timestamp}.json`（含 targets_defined、variables_defined、gradle_build）。

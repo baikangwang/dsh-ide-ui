@@ -468,9 +468,11 @@ node {{paths.tools}}verify-rewrite.mjs --original <原稿> --rewrite <改后稿>
 
 | 承载层 | 文件 | 内容 |
 |---|---|---|
-| 写作契约（架构师 / 分析师） | 见本文件开头「路径写法」 | 五条准则 + **压缩粒度边界** + 结构模板 + 整体重写语义 + 回环期纪律（净增长 ≤0） |
+| 写作契约（架构师 / 分析师） | 见本文件开头「路径写法」 | 设计/调研文档特有的写作判据 + 结构模板；**通用写作规则与压缩粒度边界取 `engineering-rules.md`，回环期纪律取 `contract-conventions.md`**（角色契约里只留指针） |
 | 检查契约（QA） | 见本文件开头「路径写法」 | D8–D13 检查项（含 **D13 数值证据完整**）+ 修订度量三个数 + `CONTROL_LOSS` 终止条件 + 审计产物规范 + 对向红线 |
-| 通用基线 | `.dsh/contracts/_shared/engineering-rules.md` | 文档写作通用规则 + 回环期纪律 + "逐字保真只管归档"的边界 |
+| 通用基线 | `.dsh/contracts/_shared/engineering-rules.md` | 文档写作通用规则（含**压缩粒度边界**）+ "逐字保真只管归档"的边界 |
+| 回环纪律 | `.dsh/contracts/_shared/contract-conventions.md` | **正式产出的回环纪律（正本）**：修订语义 / 正文禁项 / 净增长 ≤0 / 全篇自洽复检 / 三个数 / **行数口径（唯一定义处）** |
+| 引用外部结论 | `.dsh/contracts/_shared/evidence-rules.md` | 档位标注 / 外推声明 / 边界表 / 逐条禁令——**按承担者加载**，不在全员基线里 |
 | 编排人格 | `~/.dsh/.agent-presets/agile/agent.cordis.yml` | 派发架构师时附需求原文与本指南；每轮附改动纪律（整体重写 + 净增长 ≤0 + 数值留痕核对）；findings 一次给全；`CONTROL_LOSS` 停止回环 |
 | 方案文档 | `文档 05-设计文档优化方案.md` | §七 回环过程的内容修订策略（五个失控点 + 四轮验算） |
 | 变更台账 | `{{paths.changelog}}`（各项目自建） | 一行一版 |

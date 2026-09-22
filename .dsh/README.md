@@ -184,7 +184,8 @@ node dev/adapt-project.mjs doctor <目标项目根>                            #
 
 | 文件 | 作用 |
 |---|---|
-| `.dsh/contracts/_shared/contract-conventions.md` | 契约结构的单一事实源（目录约定、两态划分、角色切分依据、所有权表、回环控制律）——**两模式共用一份** |
+| `.dsh/contracts/_shared/contract-conventions.md` | 契约结构的单一事实源（目录约定、两态划分、**必读面表**、角色切分依据、所有权表、回环控制律、行数口径、回环期纪律）——**两模式共用一份** |
+| `.dsh/contracts/_shared/evidence-rules.md` | 引用外部结论与改进提案的准入（档位 / 外推声明 / 边界表 / 逐条禁令）——**按承担者加载，不随全员基线发给每个人** |
 | `.dsh/tools/REGISTRY.md` | 能力脚本登记册（生成物；**在模式仓库根**执行 `node dev/gen-tool-registry.mjs` 重生成） |
 | `dev/adapt-project.mjs` | 交付与体检工具（**模式运维脚本，不随 `.dsh/` 交付**） |
-| `.dsh/tools/lib-lines.mjs` | 行数口径**唯一定义处**（别处不得自行实现行数） |
+| `.dsh/tools/lib-lines.mjs` | 行数口径的**唯一实现**——**口径条文的正本在 `contracts/_shared/contract-conventions.md`「行数口径（唯一定义处）」**；任何工具要行数必须 import 它，不得自行实现 |
