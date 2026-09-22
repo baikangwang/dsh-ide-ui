@@ -166,7 +166,7 @@ const knownKeyGaps = new Map()
  *
  * **为什么要单独判这一档**：契约里的 `{{deploy.registry}}` / `{{deploy.arch}}` 写在
  * `deploy-standard.md` 的 Makefile 模板块里，而该契约开头就写着
- * 「**`profile.yaml` 未声明 `deploy` 的项目（如本仓库 agent-mode），本契约整体不适用**」。
+ * 「**`profile.yaml` 未声明 `deploy` 的项目（如模式仓库 agent-mode），本契约整体不适用**」。
  *
  * agent-mode 声明的是 `deploy: { platform: none, orchestration: none }` —— **段在，但声明为"不适用"**。
  * 若不判这一档，模式仓库自己会永久挂着 3 条 `deploy.*` 的 WARN。
@@ -398,7 +398,7 @@ for (const file of TARGETS) {
 //
 // **2026-09-18 第八轮修订。原判据在消费项目里结构性不可能成立。**
 //
-// 原实现是"仓库根存在 `tools/` 或 `tests/` 目录 ⇒ FAIL"。它在本仓库（模式载体）
+// 原实现是"仓库根存在 `tools/` 或 `tests/` 目录 ⇒ FAIL"。它在模式仓库（模式载体）
 // 成立——那两个目录确实是早期放错位置的能力脚本与自检。但**本检查随 `.dsh/` 交付到每一个项目**，
 // 而在**真实项目里**：`tools/` 是项目自己的工具（如 `ssh_remote.py`、`deploy/`），
 // `tests/` 是项目自己的测试用例。**要让原判据通过，就得删掉项目真实的代码与用例。**
