@@ -35,8 +35,10 @@
  *
  *   node .dsh/tests/ref-integrity-check.mjs [--root <仓库根>]
  */
-import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs'
+import { readFileSync, existsSync, statSync, readdirSync, writeFileSync, unlinkSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+import { execFileSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 
 const argOf = (n, d) => { const i = process.argv.indexOf(n); return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : d }
 const ROOT = resolve(argOf('--root', process.cwd()))
@@ -470,6 +472,180 @@ for (const abs of ABC_SCAN) {
       }
     }
   })
+}
+
+// ── 不变量四：跨文件「章节名 / 节号」引用不得悬空（2026-09-21 新增）──────────
+//
+// `ref-integrity` 原先只查**路径**引用——判据是"读者打不开"。
+// 但「见 `X.md`「某节」」是**另一种引用**：文件在、节不在，读者**翻遍全文找不到那一节**。
+// 断的方式不同，同样是悬空：
+//   路径断裂 = 打不开；章节断裂 = 按图索骥却找不到那张图。
+//
+// **本判据是踩出来的**：第十九轮删掉 `contract-conventions.md` 的「新项目接入步骤」后，
+// `.dsh/contracts/README.md` 与 `contracts-research/README.md` 仍在指向它，
+// 而闸门全程报 PASS——因为它们的路径引用全是对的。
+//
+// **判据必须紧，否则会误杀**：`X.md` 里说 **必须** 怎样」这种行到处都是，
+// 若把紧跟文件的任意 `**粗体**` 都当节名，命中会全是噪声。
+// 所以只认三种**形态紧密**的写法，不做宽松匹配。
+//
+// 键用 **basename**，多个同名文件取**节名并集**——宁可宽松（漏报）不可严格（误杀）：
+// 本判据的价值在于"这个节名在这份文件里根本不存在"，而不是精确定位到哪一份。
+const HEADING_RE = /^#{1,6}\s+(.+?)\s*$/
+const SECTION_INDEX = new Map()
+{
+  const seen = new Set()
+  void seen
+  const NORM = (s) =>
+    s.replace(/[*`]/g, '').replace(/^\d+(?:\.\d+)*[.、]?\s*/, '').replace(/^[一二三四五六七八九十]+[、.．]\s*/, '').trim()
+  for (const abs of [...TARGETS, join(ROOT, '.dsh/README.md')]) {
+    if (!existsSync(abs)) continue
+    const base = abs.replaceAll('\\', '/').split('/').pop()
+    // ⚠️ **合并，不是跳过。** 两种模式各有一份 `qa/gate-standard.md`，引用写作
+    //    `qa/gate-standard.md` 时并不指定哪一份。第一版写成 `if (seen.has(base)) continue`，
+    //    只留了先遍历到的那一份——而 `TARGETS` 里敏捷在前，于是调研版独有的
+    //    「实施评审归属」被判成"该文件没有这一节"，**误报**。
+    //    这段的注释本来就写着"取并集"，**代码和自己的注释相反**——
+    //    这类缺陷读注释发现不了，只有跑起来才知道。
+    if (!SECTION_INDEX.has(base)) {
+      SECTION_INDEX.set(base, { stems: [], nums: new Set(), phrases: new Set() })
+    }
+    const hit = SECTION_INDEX.get(base)
+    void seen
+    const stems = hit.stems
+    const nums = hit.nums
+    const phrases = hit.phrases
+    for (const line of readFileSync(abs, 'utf8').split(/\r?\n/)) {
+      for (const m of line.matchAll(/[「『]([^」』]{2,40})[」』]|\*\*([^*]{2,40})\*\*/g)) {
+        const p = (m[1] || m[2] || '').trim()
+        if (p) phrases.add(p)
+      }
+      const m = line.match(HEADING_RE)
+      if (!m) continue
+      const raw = m[1]
+      const num = raw.replace(/[*`]/g, '').trim().match(/^(\d+(?:\.\d+)*)/)
+      if (num) nums.add(num[1])
+      // 标题的多种写法都收：原样 / 去编号 / 去括注 / 去编号再去括注
+      for (const v of [
+        raw,
+        NORM(raw),
+        raw.replace(/（[^）]*）/g, '').replace(/\([^)]*\)/g, ''),
+        NORM(raw.replace(/（[^）]*）/g, '').replace(/\([^)]*\)/g, '')),
+      ]) {
+        const s = v.replace(/[*`]/g, '').trim()
+        if (s) { stems.push(s); phrases.add(s) }
+      }
+    }
+  }
+}
+/**
+ * 名字在目标文件里"找得到"吗？
+ *
+ * 三条通路，任一成立即可——判据断言的是**这个名字在目标文件里根本不存在**，
+ * 不是"它必须恰好是一个标题"：
+ *   ① 与某个标题**完全相等**；
+ *   ② 是某个标题的**前缀**（引用常只写「最小留存台账」，标题是「最小留存台账（P3c）与周期时间采集（P2a）」）；
+ *   ③ 在**标题或正文**里作为引用短语出现过（读者 grep 得到）。
+ *
+ * ②③ 是宽容的，这是**刻意的**：本判据要抓的是"按图索骥却找不到那张图"，
+ * 宁可漏报也不误杀——误杀会让读者开始无视闸门，那比漏报更贵。
+ */
+function sectionExists(hit, name) {
+  const n = name.trim()
+  if (!n) return true
+  if (hit.phrases.has(n)) return true
+  return hit.stems.some((s) => s === n || s.startsWith(n))
+}
+/** 章节名引用形态 ①：`X.md`「某节」 / `X.md` 的「某节」 */
+const SEC_QUOTED_RE = /`([^`\n]*\.md)`\s*(?:的)?\s*[「『]([^」』]+)[」』]/g
+/** 章节名引用形态 ②（抓到本轮真事故的那种）：**甲**、**乙**——全部在 `X.md` */
+const SEC_ALLIN_RE = /^(.{0,300}?)(?:——|—|--)?\s*全部在\s*`([^`\n]*\.md)`/
+/** 节号引用形态 ③：`X.md` §12.6 / `X.md` 的 §12.6 */
+const SEC_NUM_RE = /`([^`\n]*\.md)`\s*(?:的)?\s*(?:第\s*)?§?\s*(\d+(?:\.\d+)*)\s*节?/g
+/**
+ * 豁免：**模式条件引用**——行内点名了模式，那是**路由**，不是悬空。
+ *
+ * 真实正例（`engineering-rules.md` 的「评审把关」节）：
+ * > 敏捷模式见 `qa/gate-standard.md`「代码评审归属」节与 `developer/coding-standard.md`「代码评审」节；
+ * > 调研模式见 `qa/gate-standard.md`「实施评审归属」节。
+ *
+ * **两份 `gate-standard.md` 分属两种模式**：敏捷版只有「代码评审归属」，调研版只有「实施评审归属」。
+ * 同一份共享契约交付给任一消费项目时**只装其中一份**，所以按 basename 解析必然有一半落空。
+ * 原文紧跟着还写着「**这里只写"要记"，不写死路径**——写死路径就会在另一种模式下落空」——
+ * 作者明确推理过这件事。**内容是对的，判据太天真。**
+ *
+ * 与 L5 的裁定同源：**给了落点就是路由，没给落点才只是叙述。**
+ * 代价是"行内恰好点名了模式的真悬空引用"会漏报——**明记在此，不假装没有。**
+ */
+const MODE_QUALIFIED_RE = /敏捷模式|调研模式/
+for (const abs of [...TARGETS, join(ROOT, '.dsh/README.md')]) {
+  if (!existsSync(abs)) continue
+  const rel = abs.slice(ROOT.length + 1).replaceAll('\\', '/')
+  const own = abs.replaceAll('\\', '/').split('/').pop()
+  const lines = readFileSync(abs, 'utf8').split(/\r?\n/)
+  const check = (base, name, ln, kind) => {
+    const hit = SECTION_INDEX.get(base)
+    if (!hit || base === own) return // 不判同文件内引用（那由别处保证），也不判无法解析的目标
+    if (sectionExists(hit, name)) return
+    failures.push(
+      `${rel}:${ln}  ${kind}指向 \`${base}\` 的「${name}」，但该文件**没有这一节**——` +
+        '文件在、节不在，读者翻遍全文找不到（应改指向，或删掉这句）',
+    )
+  }
+  lines.forEach((line, i) => {
+    // 模式条件引用（行内点名了模式）= 路由，跳过本节的全部检查
+    if (MODE_QUALIFIED_RE.test(line)) return
+    for (const m of line.matchAll(SEC_QUOTED_RE)) check(m[1].split('/').pop(), m[2].trim(), i + 1, '章节名引用')
+    const all = line.match(SEC_ALLIN_RE)
+    if (all) {
+      const base = all[2].split('/').pop()
+      for (const mm of all[1].matchAll(/\*\*([^*]+)\*\*|[「『]([^」』]+)[」』]/g)) {
+        const nm = (mm[1] || mm[2] || '').trim()
+        if (nm) check(base, nm, i + 1, '章节名引用（全部在…）')
+      }
+    }
+    for (const m of line.matchAll(SEC_NUM_RE)) {
+      const base = m[1].split('/').pop()
+      const hit = SECTION_INDEX.get(base)
+      if (!hit || base === own) continue
+      if (!hit.nums.has(m[2])) {
+        failures.push(`${rel}:${i + 1}  节号引用指向 \`${base}\` 的 §${m[2]}，但该文件**没有这一节**`)
+      }
+    }
+  })
+}
+
+// ── 正向对照：证明上面那条判据**真的会红** ──────────────────────────────────
+//
+// 「闸门报 0 命中」有两种解释——真的干净，或者判据坏了（正则写错、分支永不进入）。
+// **两者输出一模一样。** 不变量四（章节名引用）上线时就是这样：我给它写的正向对照
+// 里有一条**看着没触发**，查了半天索引逻辑，最后发现是**我自己的输出过滤器**把它滤掉了
+// （过滤条件是「不存在」，而那条报错里写的是「没有这一节」）。
+//
+// **一个我自己选的过滤器，把证据藏了，我却据此断定"判据没生效"。**
+// 所以这段对照**必须常驻**，而且**不过滤输出**——只数条数、看形态。
+if (process.argv.includes('--self-test')) {
+  const PROBE = join(ROOT, '.dsh/contracts/_shared/zz-ref-selftest.md')
+  const CASES = [
+    ['形态① 章节名引用', '见 `qa-common.md`「这个节根本不存在」节。'],
+    ['形态② 全部在…', '**甲**——全部在 `qa-common.md`。'],
+    ['形态③ 节号引用', '见 `qa-common.md` §99.9 节。'],
+  ]
+  let bad = 0
+  for (const [name, body] of CASES) {
+    writeFileSync(PROBE, `# 探针\n\n${body}\n`, 'utf8')
+    let out = ''
+    try {
+      execFileSync(process.execPath, [fileURLToPath(import.meta.url)], { cwd: ROOT, encoding: 'utf8' })
+    } catch (e) { out = (e.stdout || '') + (e.stderr || '') }
+    // 只看**探针文件**那一节，不看全量——判据要落在被测对象上，不是落在全局上。
+    const fired = out.split(/\r?\n/).some((l) => l.includes('zz-ref-selftest.md'))
+    if (fired) console.log(`  ✔ ${name} 会红`)
+    else { console.log(`  ❌ ${name} **不会红——判据失效**`); bad++ }
+  }
+  if (existsSync(PROBE)) unlinkSync(PROBE)
+  console.log(bad ? `\n[ref-integrity] 自检 FAIL ${bad} 条` : '\n[ref-integrity] 自检 PASS：不变量四可证伪')
+  process.exit(bad ? 1 : 0)
 }
 
 // ── 输出 ───────────────────────────────────────────────────────────────────
